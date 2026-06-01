@@ -4,8 +4,6 @@ import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import './index.css'
 
-const ADMIN_CODE = 'OREVY-ADMIN-2025'
-
 export default function App() {
   const [participant, setParticipant] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -18,12 +16,13 @@ export default function App() {
   }, [])
 
   function handleLogin(data) {
-    if (data.code_acces === ADMIN_CODE) {
+    if (data.isAdmin) {
       localStorage.setItem('orevy_admin', '1')
       localStorage.removeItem('orevy_participant')
       setIsAdmin(true)
       setParticipant(null)
     } else {
+      localStorage.setItem('orevy_participant', JSON.stringify(data))
       setParticipant(data)
     }
   }
