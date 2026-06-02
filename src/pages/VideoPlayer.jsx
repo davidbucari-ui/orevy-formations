@@ -18,7 +18,7 @@ export default function VideoPlayer({ chapitreId, onClose }) {
   const [segIndex, setSegIndex] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  useEffect(() => {if (!chapitreId) { setLoading(false); return }
     fetch(`${BASE}/video_segments?chapitre_id=eq.${chapitreId}&order=created_at.asc`, { headers: H })
       .then(r => r.json())
       .then(data => { setBlocs(data); if (data.length > 0) { setSelected(data[0]); setSegIndex(0) } setLoading(false) })
