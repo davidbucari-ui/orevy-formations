@@ -61,7 +61,7 @@ export default function Admin({ onLogout }) {
     const [f, p, a] = await Promise.all([
       dbGet('formations', '?order=date_session.desc'),
       dbGet('participants', '?order=nom.asc'),
-      dbGet('acces_formations', '?order=created_at.desc'),
+      dbGet('acces_formations', ''),
     ])
     setFormations(f); setParticipants(p)
     // Enrichir les accès avec les noms
