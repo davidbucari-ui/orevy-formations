@@ -30,7 +30,7 @@ export default function Dashboard({ participant, onLogout }) {
   const [ressources, setRessources] = useState([])
   const [videoChapitreId, setVideoChapitreId] = useState(null)
 
-  useEffect(() => { loadFormations() }, [])
+  useEffect(() => { setVideoChapitreId(null); loadFormations() }, [])
 
   async function loadFormations() {
     // 1. Get acces for this participant
