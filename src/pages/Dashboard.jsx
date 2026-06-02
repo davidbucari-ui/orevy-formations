@@ -32,8 +32,21 @@ export default function Dashboard({ participant, onLogout }) {
   useEffect(() => { loadFormations() }, [])
 
   async function loadFormations() {
-    const data = await dbGet('acces_formations', `?participant_id=eq.${participant.id}&select=id,vu,date_visionnage,formations(id,titre,description,date_session,duree_minutes,lien_video,categorie)&order=created_at.desc`)
-    setFormations(data); setLoading(false)
+    // 1. Get acces for this participant
+    const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}&order=created_at.desc`)
+    if (!accesData.length) { setLoading(false); return }
+
+    // 2. Get all formation ids
+    const formationIds = accesData.map(a => a.formation_id)
+    const formationsData = await dbGet('formations', `?id=in.(${formationIds.join(',')})`)
+
+    // 3. Merge
+    const merged = accesData.map(a => ({
+      ...a,
+      formations: formationsData.find(f => f.id === a.formation_id) || {}
+    }))
+    setFormations(merged)
+    setLoading(false)
   }
 
   async function openFormation(acces) {
@@ -41,7 +54,7 @@ export default function Dashboard({ participant, onLogout }) {
       await dbPatch('acces_formations', `id=eq.${acces.id}`, { vu: true, date_visionnage: new Date().toISOString() })
       setFormations(prev => prev.map(f => f.id === acces.id ? { ...f, vu: true } : f))
     }
-    const fid = acces.formations.id
+    const fid = acces.formation_id
     const [ch, res] = await Promise.all([
       dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
       dbGet('ressources', `?formation_id=eq.${fid}&order=created_at.asc`),
