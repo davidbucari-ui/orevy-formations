@@ -28,7 +28,7 @@ export default function Dashboard({ participant, onLogout }) {
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
 
- 
+ const [playerData, setPlayerData] = useState(null)
   async function loadFormations() {
     // 1. Get acces for this participant
     const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}`)
@@ -47,6 +47,8 @@ export default function Dashboard({ participant, onLogout }) {
     setLoading(false)
   }
 useEffect(() => { loadFormations() }, [])
+
+  function parseTime(t) { if (!t) return 0; const p = t.split(':').map(Number); return p.length === 2 ? p[0]*60+p[1] : p[0]*3600+p[1]*60+p[2] }
   async function openFormation(acces) {
     if (!acces.vu) {
       await dbPatch('acces_formations', `id=eq.${acces.id}`, { vu: true, date_visionnage: new Date().toISOString() })
@@ -62,7 +64,14 @@ useEffect(() => { loadFormations() }, [])
 
   const seen = formations.filter(f => f.vu).length
   const total = formations.length
-
+if (playerData) return (
+  <div onClick={() => setPlayerData(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+    <div onClick={e => e.stopPropagation()} style={{ width: '90%', maxWidth: 860, aspectRatio: '16/9', position: 'relative' }}>
+      <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${playerData.videoId}?start=${playerData.start}&autoplay=1`} allow="autoplay; fullscreen" style={{ border: 'none', borderRadius: 8 }} />
+      <button onClick={() => setPlayerData(null)} style={{ position: 'absolute', top: -40, right: 0, background: 'none', border: 'none', color: 'white', fontSize: 28, cursor: 'pointer' }}>✕</button>
+    </div>
+  </div>
+)
    if (viewing) {
     const f = viewing.formations
     return (
@@ -116,7 +125,7 @@ useEffect(() => { loadFormations() }, [])
                 <p style={{ fontWeight: 500, marginBottom: 14, fontSize: 14 }}>📋 Séquences</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {chapitres.map((ch, i) => (
-                   <a key={ch.id} href={ch.lien} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                   <div key={ch.id} onClick={async () => { const data = await fetch(`${BASE}/video_segments?chapitre_id=eq.${ch.id}&order=created_at.asc`, { headers: H }).then(r => r.json()); if (data.length > 0) { const seg = data[0].segments?.[0]; setPlayerData({ videoId: data[0].youtube_video_id, start: parseTime(seg?.start) }) } }} style={{ cursor: 'pointer' }}>
                       <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', cursor: 'pointer' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-light)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -127,7 +136,7 @@ useEffect(() => { loadFormations() }, [])
                           <span style={{ fontSize: 12, color: 'var(--accent)' }}>▶</span>
                         </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               </div>
