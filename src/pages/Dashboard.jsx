@@ -46,7 +46,7 @@ export default function Dashboard({ participant, onLogout }) {
     setFormations(merged)
     setLoading(false)
   }
-
+useEffect(() => { loadFormations() }, [])
   async function openFormation(acces) {
     if (!acces.vu) {
       await dbPatch('acces_formations', `id=eq.${acces.id}`, { vu: true, date_visionnage: new Date().toISOString() })
