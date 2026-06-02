@@ -28,7 +28,7 @@ export default function Dashboard({ participant, onLogout }) {
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
 
-  useEffect(() => { setVideoChapitreId(null); loadFormations() }, [])
+  <a key={ch.id} href={ch.lien} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
 
   async function loadFormations() {
     // 1. Get acces for this participant
