@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-
+import VideoPlayer from './VideoPlayer'
 const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
 const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
@@ -28,6 +28,7 @@ export default function Dashboard({ participant, onLogout }) {
   const [viewing, setViewing] = useState(null)
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
+  const [videoChapitreId, setVideoChapitreId] = useState(null)
 
   useEffect(() => { loadFormations() }, [])
 
@@ -65,6 +66,7 @@ export default function Dashboard({ participant, onLogout }) {
   const seen = formations.filter(f => f.vu).length
   const total = formations.length
 
+  if (videoChapitreId) return <VideoPlayer chapitreId={videoChapitreId} onClose={() => setVideoChapitreId(null)} />
   if (viewing) {
     const f = viewing.formations
     return (
@@ -118,7 +120,7 @@ export default function Dashboard({ participant, onLogout }) {
                 <p style={{ fontWeight: 500, marginBottom: 14, fontSize: 14 }}>📋 Séquences</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {chapitres.map((ch, i) => (
-                    <a key={ch.id} href={ch.lien} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                   <div key={ch.id} onClick={() => setVideoChapitreId(ch.id)} style={{ textDecoration: 'none', cursor: 'pointer' }}>
                       <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', cursor: 'pointer' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-light)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.borderColor = 'var(--border)' }}
@@ -129,7 +131,7 @@ export default function Dashboard({ participant, onLogout }) {
                           <span style={{ fontSize: 12, color: 'var(--accent)' }}>▶</span>
                         </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               </div>
