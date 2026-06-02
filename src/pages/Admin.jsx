@@ -61,9 +61,16 @@ export default function Admin({ onLogout }) {
     const [f, p, a] = await Promise.all([
       dbGet('formations', '?order=date_session.desc'),
       dbGet('participants', '?order=nom.asc'),
-      dbGet('acces_formations', '?select=*,formations(titre),participants(nom,email)&order=created_at.desc'),
+      dbGet('acces_formations', '?order=created_at.desc'),
     ])
-    setFormations(f); setParticipants(p); setAcces(a); setLoading(false)
+    setFormations(f); setParticipants(p)
+    // Enrichir les accès avec les noms
+    const enriched = a.map(ac => ({
+      ...ac,
+      formations: f.find(x => x.id === ac.formation_id) || {},
+      participants: p.find(x => x.id === ac.participant_id) || {},
+    }))
+    setAcces(enriched); setLoading(false)
   }
 
   async function loadChapRes(fid) {
