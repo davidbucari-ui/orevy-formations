@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-
+import VideoYoutube from './VideoYoutube'
+import VideoYoutube from './VideoYoutube'
 const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
 const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Prefer': 'return=representation' }
@@ -219,6 +220,7 @@ export default function Admin({ onLogout }) {
           <button style={tabStyle('formations')} onClick={() => setTab('formations')}>Formations ({formations.length})</button>
           <button style={tabStyle('participants')} onClick={() => setTab('participants')}>Participants ({participants.length})</button>
           <button style={tabStyle('acces')} onClick={() => setTab('acces')}>Accès ({acces.length})</button>
+          <button style={tabStyle('videos')} onClick={() => setTab('videos')}>Vidéos YouTube</button>
         </div>
         {loading ? <div style={{ textAlign: 'center', padding: 60, color: 'var(--ink-muted)' }}>Chargement…</div> : (<>
           {tab === 'formations' && (
@@ -328,6 +330,7 @@ export default function Admin({ onLogout }) {
             </div>
           )}
         </>)}
+        {tab === 'videos' && <VideoYoutube />}
       </div>
     </div>
   )
