@@ -33,7 +33,7 @@ export default function Dashboard({ participant, onLogout }) {
 
   async function loadFormations() {
     // 1. Get acces for this participant
-    const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}&order=created_at.desc`)
+    const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}`)
     if (!accesData.length) { setLoading(false); return }
 
     // 2. Get all formation ids
