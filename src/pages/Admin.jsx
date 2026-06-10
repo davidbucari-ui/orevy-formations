@@ -1,23 +1,33 @@
 import { useState, useEffect } from 'react'
-import VideoYoutube from './VideoYoutube'
+
+// ── Projet RH (participants, accès, vidéos) — via Cloudflare Worker
 const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
 const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
 const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Prefer': 'return=representation' }
 
+// ── Projet Formations (formations, formation_blocs, formation_quiz) — direct Supabase
+const F_BASE = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
+const F_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjAxODYsImV4cCI6MjA5NjY5NjE4Nn0.mzejn3GMcVF4grWp9BbpW9p2p_7zK8F9yefO4MRr8qg'
+const F_H = { 'Content-Type': 'application/json', 'apikey': F_KEY, 'Authorization': 'Bearer ' + F_KEY, 'Prefer': 'return=representation' }
+
+const F_TABLES = new Set(['formations', 'formation_blocs', 'formation_quiz'])
+function _base(t) { return F_TABLES.has(t) ? F_BASE : BASE }
+function _h(t)    { return F_TABLES.has(t) ? F_H    : H    }
+
 async function dbGet(table, params = '') {
-  const r = await fetch(`${BASE}/${table}${params}`, { headers: H })
+  const r = await fetch(`${_base(table)}/${table}${params}`, { headers: _h(table) })
   return r.ok ? await r.json() : []
 }
 async function dbPost(table, body) {
-  const r = await fetch(`${BASE}/${table}`, { method: 'POST', headers: H, body: JSON.stringify(body) })
+  const r = await fetch(`${_base(table)}/${table}`, { method: 'POST', headers: _h(table), body: JSON.stringify(body) })
   return { ok: r.ok, data: await r.json() }
 }
 async function dbPatch(table, filter, body) {
-  const r = await fetch(`${BASE}/${table}?${filter}`, { method: 'PATCH', headers: H, body: JSON.stringify(body) })
+  const r = await fetch(`${_base(table)}/${table}?${filter}`, { method: 'PATCH', headers: _h(table), body: JSON.stringify(body) })
   return r.ok
 }
 async function dbDelete(table, filter) {
-  const r = await fetch(`${BASE}/${table}?${filter}`, { method: 'DELETE', headers: H })
+  const r = await fetch(`${_base(table)}/${table}?${filter}`, { method: 'DELETE', headers: _h(table) })
   return r.ok
 }
 
@@ -219,7 +229,6 @@ export default function Admin({ onLogout }) {
           <button style={tabStyle('formations')} onClick={() => setTab('formations')}>Formations ({formations.length})</button>
           <button style={tabStyle('participants')} onClick={() => setTab('participants')}>Participants ({participants.length})</button>
           <button style={tabStyle('acces')} onClick={() => setTab('acces')}>Accès ({acces.length})</button>
-          <button style={tabStyle('videos')} onClick={() => setTab('videos')}>Vidéos YouTube</button>
         </div>
         {loading ? <div style={{ textAlign: 'center', padding: 60, color: 'var(--ink-muted)' }}>Chargement…</div> : (<>
           {tab === 'formations' && (
@@ -329,7 +338,6 @@ export default function Admin({ onLogout }) {
             </div>
           )}
         </>)}
-        {tab === 'videos' && <VideoYoutube />}
       </div>
     </div>
   )
