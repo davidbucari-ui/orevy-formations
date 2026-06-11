@@ -250,7 +250,7 @@ export default function Admin({ onLogout }) {
                           </div>
                           <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
                             <span style={{ fontSize: 12, color: b.audio_script ? '#059669' : 'var(--ink-muted)' }}>{b.audio_script ? `✓ Script (${b.audio_script.split(' ').length} mots)` : '○ Pas de script'}</span>
-                            <span style={{ fontSize: 12, color: b.audio_url ? '#059669' : 'var(--ink-muted)' }}>{b.audio_url ? '🎵 Audio généré' : '○ Pas d'audio'}</span>
+                            <span style={{ fontSize: 12, color: b.audio_url ? '#059669' : 'var(--ink-muted)' }}>{b.audio_url ? '🎵 Audio généré' : "○ Pas d'audio"}</span>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
