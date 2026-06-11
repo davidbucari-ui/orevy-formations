@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react'
-import ElearningReader from './ElearningReader'
 
-const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
-const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+const BASE_F = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
+const KEY_F = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
+const H_F = { 'Content-Type': 'application/json', 'apikey': KEY_F, 'Authorization': 'Bearer ' + KEY_F }
 
 async function dbGet(table, params = '') {
-  const r = await fetch(`${BASE}/${table}${params}`, { headers: H })
+  const r = await fetch(`${BASE_F}/${table}${params}`, { headers: H_F })
   return r.ok ? await r.json() : []
 }
 async function dbPatch(table, filter, body) {
-  await fetch(`${BASE}/${table}?${filter}`, { method: 'PATCH', headers: { ...H, 'Prefer': 'return=minimal' }, body: JSON.stringify(body) })
+  await fetch(`${BASE_F}/${table}?${filter}`, { method: 'PATCH', headers: { ...H_F, 'Prefer': 'return=minimal' }, body: JSON.stringify(body) })
 }
 
 function formatDate(d) {
@@ -26,18 +25,22 @@ function formatDuration(min) {
 export default function Dashboard({ participant, onLogout }) {
   const [formations, setFormations] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState(null)       // session vidéo
-  const [elearning, setElearning] = useState(null)   // e-learning
+  const [viewing, setViewing] = useState(null)
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
 
   useEffect(() => { loadFormations() }, [])
 
   async function loadFormations() {
+    // 1. Get acces for this participant
     const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}`)
     if (!accesData.length) { setLoading(false); return }
+
+    // 2. Get all formation ids
     const formationIds = accesData.map(a => a.formation_id)
     const formationsData = await dbGet('formations', `?id=in.(${formationIds.join(',')})`)
+
+    // 3. Merge
     const merged = accesData.map(a => ({
       ...a,
       formations: formationsData.find(f => f.id === a.formation_id) || {}
@@ -51,13 +54,6 @@ export default function Dashboard({ participant, onLogout }) {
       await dbPatch('acces_formations', `id=eq.${acces.id}`, { vu: true, date_visionnage: new Date().toISOString() })
       setFormations(prev => prev.map(f => f.id === acces.id ? { ...f, vu: true } : f))
     }
-    const f = acces.formations
-    // Routing selon le type
-    if (f.type === 'elearning') {
-      setElearning(acces)
-      return
-    }
-    // Session vidéo (type = 'video' ou non défini)
     const fid = acces.formation_id
     const [ch, res] = await Promise.all([
       dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
@@ -66,18 +62,9 @@ export default function Dashboard({ participant, onLogout }) {
     setChapitres(ch); setRessources(res); setViewing(acces)
   }
 
-  // ── Vue E-learning ─────────────────────────────────────────
-  if (elearning) {
-    return (
-      <ElearningReader
-        formation={elearning.formations}
-        participant={participant}
-        onBack={() => setElearning(null)}
-      />
-    )
-  }
+  const seen = formations.filter(f => f.vu).length
+  const total = formations.length
 
-  // ── Vue Session Vidéo ──────────────────────────────────────
   if (viewing) {
     const f = viewing.formations
     return (
@@ -86,7 +73,7 @@ export default function Dashboard({ participant, onLogout }) {
           <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 16, height: 60 }}>
             <button onClick={() => setViewing(null)} className="btn-secondary" style={{ padding: '7px 14px', fontSize: 13 }}>← Retour</button>
             <span style={{ fontSize: 14, color: 'var(--ink-soft)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titre}</span>
-            <span style={{ background: '#E0F2FE', color: '#0369A1', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Session Teams</span>
+            <span className="badge badge-seen">✓ Vu</span>
           </div>
         </div>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 24px' }}>
@@ -153,10 +140,6 @@ export default function Dashboard({ participant, onLogout }) {
     )
   }
 
-  // ── Dashboard principal ────────────────────────────────────
-  const seen = formations.filter(f => f.vu).length
-  const total = formations.length
-
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <div style={{ background: 'var(--warm-white)', borderBottom: '1px solid var(--border)' }}>
@@ -171,7 +154,7 @@ export default function Dashboard({ participant, onLogout }) {
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
         <div className="fade-up" style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 32, marginBottom: 6 }}>Mes formations</h1>
-          <p style={{ color: 'var(--ink-muted)', fontSize: 15 }}>Bonjour {participant.nom.split(' ')[0]} — {seen} sur {total} formation{total > 1 ? 's' : ''} suivie{seen > 1 ? 's' : ''}</p>
+          <p style={{ color: 'var(--ink-muted)', fontSize: 15 }}>Bonjour {participant.nom.split(' ')[0]} — {seen} sur {total} session{total > 1 ? 's' : ''} visionnée{seen > 1 ? 's' : ''}</p>
         </div>
         {total > 0 && (
           <div className="fade-up" style={{ marginBottom: 32 }}>
@@ -180,52 +163,42 @@ export default function Dashboard({ participant, onLogout }) {
             </div>
           </div>
         )}
-        {loading
-          ? <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--ink-muted)' }}>Chargement…</div>
-          : formations.length === 0
-            ? (
-              <div className="card" style={{ padding: '48px 32px', textAlign: 'center' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
-                <p style={{ color: 'var(--ink-soft)', fontSize: 15 }}>Aucune formation disponible pour le moment.</p>
-              </div>
-            )
-            : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {formations.map((acces, i) => {
-                  const f = acces.formations
-                  const isElearning = f.type === 'elearning'
-                  return (
-                    <div key={acces.id} className="card fade-up"
-                      style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, animationDelay: `${0.1 + i * 0.06}s`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                      onClick={() => openFormation(acces)}
-                      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
-                    >
-                      <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: acces.vu ? 'var(--green-light)' : isElearning ? '#EDE9FE' : 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                        {acces.vu ? '✓' : isElearning ? '📚' : '▶'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                          <span className={`badge ${acces.vu ? 'badge-seen' : 'badge-new'}`}>{acces.vu ? 'Suivi' : 'Nouveau'}</span>
-                          <span style={{ background: isElearning ? '#EDE9FE' : '#E0F2FE', color: isElearning ? '#6D28D9' : '#0369A1', fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20 }}>
-                            {isElearning ? 'E-learning' : 'Session Teams'}
-                          </span>
-                          {f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
-                        </div>
-                        <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>{f.titre}</p>
-                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                          {f.date_session && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>📅 {formatDate(f.date_session)}</span>}
-                          {f.duree_minutes && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>⏱ {formatDuration(f.duree_minutes)}</span>}
-                          {f.duree && !f.duree_minutes && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>⏱ {f.duree}</span>}
-                        </div>
-                      </div>
-                      <div style={{ color: 'var(--ink-muted)', fontSize: 18, flexShrink: 0 }}>→</div>
+        {loading ? <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--ink-muted)' }}>Chargement…</div>
+          : formations.length === 0 ? (
+            <div className="card" style={{ padding: '48px 32px', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
+              <p style={{ color: 'var(--ink-soft)', fontSize: 15 }}>Aucune formation disponible pour le moment.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {formations.map((acces, i) => {
+                const f = acces.formations
+                return (
+                  <div key={acces.id} className="card fade-up" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, animationDelay: `${0.1 + i * 0.06}s`, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onClick={() => openFormation(acces)}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
+                  >
+                    <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: acces.vu ? 'var(--green-light)' : 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                      {acces.vu ? '✓' : '▶'}
                     </div>
-                  )
-                })}
-              </div>
-            )
-        }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <span className={`badge ${acces.vu ? 'badge-seen' : 'badge-new'}`}>{acces.vu ? 'Vu' : 'Nouveau'}</span>
+                        {f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
+                      </div>
+                      <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>{f.titre}</p>
+                      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                        {f.date_session && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>📅 {formatDate(f.date_session)}</span>}
+                        {f.duree_minutes && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>⏱ {formatDuration(f.duree_minutes)}</span>}
+                      </div>
+                    </div>
+                    <div style={{ color: 'var(--ink-muted)', fontSize: 18, flexShrink: 0 }}>→</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
       </div>
     </div>
   )
