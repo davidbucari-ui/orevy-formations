@@ -1,22 +1,23 @@
 import { useState } from 'react'
 
-const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
-const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+const BASE = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
+const H    = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+
 const ADMIN_CODE = 'OREVY-ADMIN-2025'
 
 export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
+  const [email, setEmail]     = useState('')
+  const [code, setCode]       = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError('')
     const emailClean = email.trim().toLowerCase()
-    const codeClean = code.trim().toUpperCase()
+    const codeClean  = code.trim().toUpperCase()
 
     if (codeClean === ADMIN_CODE) {
       onLogin({ isAdmin: true, email: emailClean, code_acces: ADMIN_CODE })
@@ -24,7 +25,7 @@ export default function Login({ onLogin }) {
       return
     }
 
-    const r = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`, { headers: H })
+    const r    = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`, { headers: H })
     const data = await r.json()
 
     if (!r.ok || !data || data.length === 0) {
@@ -57,11 +58,19 @@ export default function Login({ onLogin }) {
               <input type="text" placeholder="OREVY-XXXXXX" value={code} onChange={e => setCode(e.target.value)} required style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }} />
               <p style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px' }}>Communiqué par email après votre session</p>
             </div>
-            {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '14px', color: '#991B1B', marginBottom: '16px' }}>{error}</div>}
-            <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Connexion…' : 'Accéder à mes formations →'}</button>
+            {error && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '14px', color: '#991B1B', marginBottom: '16px' }}>
+                {error}
+              </div>
+            )}
+            <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
+              {loading ? 'Connexion…' : 'Accéder à mes formations →'}
+            </button>
           </form>
         </div>
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.</p>
+        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>
+          Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.
+        </p>
       </div>
     </div>
   )
