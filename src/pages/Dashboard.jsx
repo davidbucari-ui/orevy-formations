@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const BASE_F = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
 const KEY_F = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
@@ -29,6 +29,22 @@ function ElearningReader({ formation, onClose }) {
   const [activeSeq, setActiveSeq] = useState(0)
   const [activeSlide, setActiveSlide] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    function onFsChange() { setIsFullscreen(!!document.fullscreenElement) }
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
 
   useEffect(() => {
     loadSlides()
@@ -99,7 +115,7 @@ function ElearningReader({ formation, onClose }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1A1614', display: 'flex', flexDirection: 'column' }}>
+    <div ref={containerRef} style={{ minHeight: '100vh', background: '#1A1614', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ background: '#2A1E1A', borderBottom: '1px solid #3D2318', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 16, height: 56, flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: '1px solid #3D2318', color: '#A0887A', padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Retour</button>
@@ -109,6 +125,9 @@ function ElearningReader({ formation, onClose }) {
         <span style={{ fontSize: 12, color: '#A0887A', flexShrink: 0 }}>
           Séq. {currentSeq?.seq_num} · {activeSlide + 1}/{totalSlides}
         </span>
+        <button onClick={toggleFullscreen} title={isFullscreen ? 'Quitter le plein écran (Esc)' : 'Plein écran'} style={{ background: 'none', border: '1px solid #3D2318', color: '#A0887A', padding: '6px 10px', borderRadius: 6, fontSize: 15, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>
+          {isFullscreen ? '✕' : '⛶'}
+        </button>
       </div>
 
       {/* Nav séquences */}
