@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import ElearningReaderBlocs from './ElearningReader'
 
 const BASE_F = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
 const KEY_F = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
@@ -23,10 +22,10 @@ function formatDuration(min) {
   return min < 60 ? `${min} min` : m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
 }
 
-// ── Lecteur e-learning slides SVG (F1) ────────────────────────
+// ── Lecteur e-learning slides SVG ─────────────────────────────
 
 function ElearningReader({ formation, onClose }) {
-  const [sequences, setSequences] = useState([])
+  const [sequences, setSequences] = useState([]) // { seq_num, slides[] }
   const [activeSeq, setActiveSeq] = useState(0)
   const [activeSlide, setActiveSlide] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -46,11 +45,15 @@ function ElearningReader({ formation, onClose }) {
     }
   }
 
-  useEffect(() => { loadSlides() }, [])
+  useEffect(() => {
+    loadSlides()
+  }, [])
 
   async function loadSlides() {
     const slides = await dbGet('slides', `?formation_id=eq.${formation.id}&order=sequence_num.asc,ordre.asc`)
     if (!slides.length) { setLoading(false); return }
+
+    // Grouper par sequence_num
     const seqMap = {}
     slides.forEach(s => {
       if (!seqMap[s.sequence_num]) seqMap[s.sequence_num] = []
@@ -59,6 +62,7 @@ function ElearningReader({ formation, onClose }) {
     const grouped = Object.entries(seqMap)
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([num, slides]) => ({ seq_num: Number(num), slides }))
+
     setSequences(grouped)
     setLoading(false)
   }
@@ -111,6 +115,7 @@ function ElearningReader({ formation, onClose }) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#1A1614', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
       <div style={{ background: '#2A1E1A', borderBottom: '1px solid #3D2318', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 16, height: 56, flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: '1px solid #3D2318', color: '#A0887A', padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Retour</button>
         <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -123,6 +128,8 @@ function ElearningReader({ formation, onClose }) {
           {isFullscreen ? '✕' : '⛶'}
         </button>
       </div>
+
+      {/* Nav séquences */}
       <div style={{ background: '#2A1E1A', borderBottom: '1px solid #3D2318', padding: '0 24px', display: 'flex', gap: 4, overflowX: 'auto', flexShrink: 0 }}>
         {sequences.map((seq, i) => (
           <button key={seq.seq_num} onClick={() => goToSeq(i)} style={{
@@ -136,6 +143,8 @@ function ElearningReader({ formation, onClose }) {
           </button>
         ))}
       </div>
+
+      {/* Slide principale */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px', overflowY: 'auto' }}>
         {currentSlide && (
           <div style={{ width: '100%', maxWidth: 1000, background: '#2A1E1A', borderRadius: 12, overflow: 'hidden', border: '1px solid #3D2318', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
@@ -150,10 +159,16 @@ function ElearningReader({ formation, onClose }) {
             />
           </div>
         )}
+
+        {/* Navigation slides */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 20 }}>
-          <button onClick={prev} disabled={isFirst && activeSeq === 0}
+          <button
+            onClick={prev}
+            disabled={isFirst && activeSeq === 0}
             style={{ padding: '10px 22px', background: '#2A1E1A', border: '1px solid #3D2318', color: '#FAF8F4', borderRadius: 8, fontSize: 14, cursor: 'pointer', opacity: (isFirst && activeSeq === 0) ? 0.3 : 1, fontFamily: 'inherit' }}
           >← Préc.</button>
+
+          {/* Dots */}
           <div style={{ display: 'flex', gap: 6 }}>
             {currentSeq?.slides.map((_, i) => (
               <button key={i} onClick={() => setActiveSlide(i)} style={{
@@ -163,18 +178,24 @@ function ElearningReader({ formation, onClose }) {
               }} />
             ))}
           </div>
+
           {isLast && isLastSeq ? (
-            <button onClick={onClose}
+            <button
+              onClick={onClose}
               style={{ padding: '10px 22px', background: '#E07A5F', border: 'none', color: '#fff', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit' }}
             >Terminer ✓</button>
           ) : (
-            <button onClick={next}
+            <button
+              onClick={next}
               style={{ padding: '10px 22px', background: '#E07A5F', border: 'none', color: '#fff', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
             >Suiv. →</button>
           )}
         </div>
+
+        {/* Infographie dispo ? (si la slide actuelle n'est pas déjà l'infographie) */}
         {currentSlide?.type !== 'infographie' && currentSeq?.slides[0]?.type === 'infographie' && (
-          <button onClick={() => setActiveSlide(0)}
+          <button
+            onClick={() => setActiveSlide(0)}
             style={{ marginTop: 12, background: 'none', border: '1px dashed #3D2318', color: '#A0887A', padding: '6px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             📋 Voir l'infographie récapitulative
@@ -190,9 +211,8 @@ function ElearningReader({ formation, onClose }) {
 export default function Dashboard({ participant, onLogout }) {
   const [formations, setFormations] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState(null)
-  const [elearning, setElearning] = useState(null)
-  const [blocsElearning, setBlocsElearning] = useState(null)
+  const [viewing, setViewing] = useState(null)       // acces object (type video)
+  const [elearning, setElearning] = useState(null)   // formation object (type elearning)
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
 
@@ -201,8 +221,11 @@ export default function Dashboard({ participant, onLogout }) {
   async function loadFormations() {
     const accesData = await dbGet('acces_formations', `?participant_id=eq.${participant.id}`)
     if (!accesData.length) { setLoading(false); return }
+
     const formationIds = accesData.map(a => a.formation_id)
-    const formationsData = await dbGet('formations', `?id=in.(${formationIds.join(',')})`)
+    // UUIDs must be quoted inside in() for PostgREST to parse them correctly
+    const formationsData = await dbGet('formations', `?id=in.("${formationIds.join('","')}")`)
+
     const merged = accesData.map(a => ({
       ...a,
       formations: formationsData.find(f => f.id === a.formation_id) || {}
@@ -219,40 +242,31 @@ export default function Dashboard({ participant, onLogout }) {
 
     const f = acces.formations
 
-    // Priorité 1 : slides SVG → F1
+    // Déterminer le mode : si la formation a des slides → e-learning, sinon → video
     const slides = await dbGet('slides', `?formation_id=eq.${f.id}&limit=1`)
     if (slides.length > 0) {
+      // Mode e-learning
       setElearning(f)
-      return
+    } else {
+      // Mode vidéo (ancien comportement)
+      const fid = acces.formation_id
+      const [ch, res] = await Promise.all([
+        dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
+        dbGet('ressources', `?formation_id=eq.${fid}&order=created_at.asc`),
+      ])
+      setChapitres(ch); setRessources(res); setViewing(acces)
     }
-
-    // Priorité 2 : blocs → F2-F5
-    const blocs = await dbGet('formation_blocs', `?formation_id=eq.${f.id}&limit=1`)
-    if (blocs.length > 0) {
-      setBlocsElearning(f)
-      return
-    }
-
-    // Fallback : vidéo
-    const fid = acces.formation_id
-    const [ch, res] = await Promise.all([
-      dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
-      dbGet('ressources', `?formation_id=eq.${fid}&order=created_at.asc`),
-    ])
-    setChapitres(ch); setRessources(res); setViewing(acces)
   }
 
   const seen = formations.filter(f => f.vu).length
   const total = formations.length
 
+  // Vue e-learning
   if (elearning) {
     return <ElearningReader formation={elearning} onClose={() => setElearning(null)} />
   }
 
-  if (blocsElearning) {
-    return <ElearningReaderBlocs formation={blocsElearning} participant={participant} onBack={() => setBlocsElearning(null)} />
-  }
-
+  // Vue vidéo
   if (viewing) {
     const f = viewing.formations
     return (
@@ -328,6 +342,7 @@ export default function Dashboard({ participant, onLogout }) {
     )
   }
 
+  // Vue liste formations
   return (
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       <div style={{ background: 'var(--warm-white)', borderBottom: '1px solid var(--border)' }}>
