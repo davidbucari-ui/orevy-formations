@@ -1,1 +1,16 @@
 /* App layout */
+
+/* ── Fullscreen reader ── */
+:fullscreen {
+  overflow: auto !important;
+}
+:-webkit-full-screen {
+  overflow: auto !important;
+}
+:-moz-full-screen {
+  overflow: auto !important;
+}
+
+
+:fullscreen { overflow-y: auto; }
+:-webkit-full-screen { overflow-y: auto; }
