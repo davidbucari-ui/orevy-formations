@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import ElearningReaderBlocs from './ElearningReader'
+import { useState, useEffect, useRef } from 'react'
 
 const BASE_F = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
 const KEY_F = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
@@ -31,6 +30,7 @@ function ElearningReader({ formation, onClose }) {
   const [activeSlide, setActiveSlide] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     function onFsChange() { setIsFullscreen(!!document.fullscreenElement) }
@@ -40,7 +40,7 @@ function ElearningReader({ formation, onClose }) {
 
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
+      containerRef.current?.requestFullscreen()
     } else {
       document.exitFullscreen()
     }
@@ -115,7 +115,7 @@ function ElearningReader({ formation, onClose }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1A1614', display: 'flex', flexDirection: 'column' }}>
+    <div ref={containerRef} style={{ minHeight: '100vh', background: '#1A1614', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ background: '#2A1E1A', borderBottom: '1px solid #3D2318', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 16, height: 56, flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'none', border: '1px solid #3D2318', color: '#A0887A', padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Retour</button>
@@ -148,7 +148,7 @@ function ElearningReader({ formation, onClose }) {
       {/* Slide principale */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '24px 16px', overflowY: 'auto' }}>
         {currentSlide && (
-          <div style={{ width: '100%', maxWidth: 1000, background: '#2A1E1A', borderRadius: 12, overflow: 'hidden', border: '1px solid #3D2318', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+          <div style={{ width: '100%', maxWidth: 720, background: '#2A1E1A', borderRadius: 12, overflow: 'hidden', border: '1px solid #3D2318', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
             {currentSlide.titre && (
               <div style={{ padding: '10px 16px', fontSize: 11, letterSpacing: 1, color: '#A0887A', borderBottom: '1px solid #3D2318', fontFamily: 'monospace' }}>
                 {currentSlide.titre}
@@ -212,9 +212,8 @@ function ElearningReader({ formation, onClose }) {
 export default function Dashboard({ participant, onLogout }) {
   const [formations, setFormations] = useState([])
   const [loading, setLoading] = useState(true)
-  const [viewing, setViewing] = useState(null)         // acces object (type video)
-  const [elearning, setElearning] = useState(null)     // formation object (slides SVG)
-  const [blocsElearning, setBlocsElearning] = useState(null) // formation object (blocs formation_blocs)
+  const [viewing, setViewing] = useState(null)       // acces object (type video)
+  const [elearning, setElearning] = useState(null)   // formation object (type elearning)
   const [chapitres, setChapitres] = useState([])
   const [ressources, setRessources] = useState([])
 
@@ -243,40 +242,28 @@ export default function Dashboard({ participant, onLogout }) {
 
     const f = acces.formations
 
-    // Priorité 1 : slides SVG (F1)
+    // Déterminer le mode : si la formation a des slides → e-learning, sinon → video
     const slides = await dbGet('slides', `?formation_id=eq.${f.id}&limit=1`)
     if (slides.length > 0) {
+      // Mode e-learning
       setElearning(f)
-      return
+    } else {
+      // Mode vidéo (ancien comportement)
+      const fid = acces.formation_id
+      const [ch, res] = await Promise.all([
+        dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
+        dbGet('ressources', `?formation_id=eq.${fid}&order=created_at.asc`),
+      ])
+      setChapitres(ch); setRessources(res); setViewing(acces)
     }
-
-    // Priorité 2 : blocs formation_blocs (F2–F5)
-    const blocs = await dbGet('formation_blocs', `?formation_id=eq.${f.id}&limit=1`)
-    if (blocs.length > 0) {
-      setBlocsElearning(f)
-      return
-    }
-
-    // Fallback : mode vidéo
-    const fid = acces.formation_id
-    const [ch, res] = await Promise.all([
-      dbGet('chapitres', `?formation_id=eq.${fid}&order=ordre.asc`),
-      dbGet('ressources', `?formation_id=eq.${fid}&order=created_at.asc`),
-    ])
-    setChapitres(ch); setRessources(res); setViewing(acces)
   }
 
   const seen = formations.filter(f => f.vu).length
   const total = formations.length
 
-  // Vue e-learning slides SVG (F1)
+  // Vue e-learning
   if (elearning) {
     return <ElearningReader formation={elearning} onClose={() => setElearning(null)} />
-  }
-
-  // Vue e-learning blocs (F2–F5)
-  if (blocsElearning) {
-    return <ElearningReaderBlocs formation={blocsElearning} participant={participant} onBack={() => setBlocsElearning(null)} />
   }
 
   // Vue vidéo

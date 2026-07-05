@@ -233,8 +233,8 @@ export default function ElearningReader({ formation, participant, onBack }) {
   const [showQuiz, setShowQuiz] = useState(false)
   const [fData, setFData] = useState(null)
 
-  // slug du champ Supabase
-  const slug = formation?.slug || formation?.elearning_slug
+  // formation.elearning_slug est le slug dans yyqpp
+  const slug = formation?.elearning_slug
 
   useEffect(() => {
     if (!slug) { setLoading(false); return }
