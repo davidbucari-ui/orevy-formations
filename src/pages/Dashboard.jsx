@@ -312,7 +312,8 @@ function AudioBloc({ audioUrl, narration, couleur }) {
   const totalChars = phrases.reduce((n, p) => n + p.length, 0) || 1
   let activeIdx = -1
   if (dur > 0 && phrases.length) {
-    const frac = Math.min(cur / dur, 0.999)
+    const LAG = 0.7 // secondes de retard du surlignage (monte à 1.0–1.5 si encore trop vite)
+    const frac = Math.min(Math.max((cur - LAG) / dur, 0), 0.999)
     let acc = 0
     for (let i = 0; i < phrases.length; i++) { acc += phrases[i].length / totalChars; if (frac < acc) { activeIdx = i; break } }
     if (activeIdx === -1) activeIdx = phrases.length - 1
