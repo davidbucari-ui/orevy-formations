@@ -287,6 +287,25 @@ function BlocReflexion({ c }) {
   )
 }
 
+function BlocImage({ c }) {
+  if (!c.url) return null
+  return (
+    <figure style={{ margin: '0 0 20px', textAlign: 'center' }}>
+      <img
+        src={c.url}
+        alt={c.alt || ''}
+        loading="lazy"
+        style={{ maxWidth: '100%', height: c.hauteur ? c.hauteur : 'auto', maxHeight: c.hauteur || 'none', objectFit: 'contain', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--warm-white)' }}
+      />
+      {c.legende && (
+        <figcaption style={{ marginTop: 8, fontSize: 13, color: 'var(--ink-soft)', fontStyle: 'italic', lineHeight: 1.5 }}>
+          {c.legende}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 function renderBloc(b) {
   const c = b.contenu || {}
   switch (b.type) {
@@ -295,6 +314,7 @@ function renderBloc(b) {
     case 'principe':  return <BlocPrincipe key={b.id} c={c} />
     case 'erreur':    return <BlocErreur key={b.id} c={c} />
     case 'reflexion': return <BlocReflexion key={b.id} c={c} />
+    case 'image':     return <BlocImage key={b.id} c={c} />
     default: return null
   }
 }

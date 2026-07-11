@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-const BASE = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjAxODYsImV4cCI6MjA5NjY5NjE4Nn0.mzejn3GMcVF4grWp9BbpW9p2p_7zK8F9yefO4MRr8qg'
+const BASE = 'https://orevy-proxy.david-bucari.workers.dev/rest/v1'
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
 const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
 const ADMIN_CODE = 'OREVY-ADMIN-2025'
 
@@ -62,6 +62,11 @@ export default function Login({ onLogin }) {
           </form>
         </div>
         <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.</p>
+        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+          <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ fontSize: '14px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+            Découvrir Orevy Solutions →
+          </a>
+        </div>
       </div>
     </div>
   )
