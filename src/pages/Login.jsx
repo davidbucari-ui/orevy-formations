@@ -60,13 +60,13 @@ export default function Login({ onLogin }) {
             {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '14px', color: '#991B1B', marginBottom: '16px' }}>{error}</div>}
             <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Connexion…' : 'Accéder à mes formations →'}</button>
           </form>
+          <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #EAE4DA' }}>
+            <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ fontSize: '14px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Découvrir Orevy Solutions →
+            </a>
+          </div>
         </div>
         <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.</p>
-        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #EAE4DA' }}>
-          <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ fontSize: '14px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-            Découvrir Orevy Solutions →
-          </a>
-        </div>
       </div>
     </div>
   )
