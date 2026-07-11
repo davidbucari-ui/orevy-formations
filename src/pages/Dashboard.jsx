@@ -290,19 +290,63 @@ function BlocReflexion({ c }) {
 function BlocImage({ c }) {
   if (!c.url) return null
   return (
-    <figure style={{ margin: '0 0 20px', textAlign: 'center' }}>
-      <img
-        src={c.url}
-        alt={c.alt || ''}
-        loading="lazy"
-        style={{ maxWidth: '100%', height: c.hauteur ? c.hauteur : 'auto', maxHeight: c.hauteur || 'none', objectFit: 'contain', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--warm-white)' }}
-      />
+    <figure style={{ margin: '0 0 20px', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--warm-white)' }}>
+      <img src={c.url} alt={c.alt || c.legende || ''} style={{ display: 'block', width: '100%', height: c.hauteur ? `${c.hauteur}px` : 'auto', objectFit: 'cover' }} />
       {c.legende && (
-        <figcaption style={{ marginTop: 8, fontSize: 13, color: 'var(--ink-soft)', fontStyle: 'italic', lineHeight: 1.5 }}>
-          {c.legende}
-        </figcaption>
+        <figcaption style={{ fontSize: 12, color: 'var(--ink-muted)', fontStyle: 'italic', padding: '8px 14px', borderTop: '1px solid var(--border)' }}>{c.legende}</figcaption>
       )}
     </figure>
+  )
+}
+
+// Lecteur audio « player narré » : n'apparaît que sur les blocs ayant contenu.audio_url.
+// Si contenu.narration est présent, affiche le transcript avec surlignage proportionnel.
+function AudioBloc({ audioUrl, narration, couleur }) {
+  const col = couleur || '#3D8A7A'
+  const audioRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+  const [cur, setCur] = useState(0)
+  const [dur, setDur] = useState(0)
+
+  const phrases = (narration || '').split(/(?<=[.!?…])\s+/).map(s => s.trim()).filter(Boolean)
+  const totalChars = phrases.reduce((n, p) => n + p.length, 0) || 1
+  let activeIdx = -1
+  if (dur > 0 && phrases.length) {
+    const frac = Math.min(cur / dur, 0.999)
+    let acc = 0
+    for (let i = 0; i < phrases.length; i++) { acc += phrases[i].length / totalChars; if (frac < acc) { activeIdx = i; break } }
+    if (activeIdx === -1) activeIdx = phrases.length - 1
+  }
+  const toggle = () => { const a = audioRef.current; if (!a) return; if (a.paused) { a.play(); setPlaying(true) } else { a.pause(); setPlaying(false) } }
+  const fmt = t => { if (!t || isNaN(t)) return '0:00'; const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${s < 10 ? '0' : ''}${s}` }
+  const seek = e => { const a = audioRef.current; if (!a || !dur) return; const r = e.currentTarget.getBoundingClientRect(); a.currentTime = ((e.clientX - r.left) / r.width) * dur }
+
+  return (
+    <div style={{ background: `${col}0D`, border: `1px solid ${col}33`, borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
+      <audio ref={audioRef} src={audioUrl} preload="metadata"
+        onLoadedMetadata={e => setDur(e.target.duration)} onTimeUpdate={e => setCur(e.target.currentTime)} onEnded={() => setPlaying(false)} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={toggle} aria-label={playing ? 'Pause' : 'Écouter'}
+          style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: col, color: '#fff', fontSize: 15, cursor: 'pointer', flexShrink: 0 }}>
+          {playing ? '❚❚' : '▶'}
+        </button>
+        <div style={{ flex: 1 }}>
+          <div onClick={seek} style={{ height: 6, background: `${col}26`, borderRadius: 3, cursor: 'pointer', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${dur ? (cur / dur) * 100 : 0}%`, background: col, borderRadius: 3 }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-muted)', marginTop: 4 }}>
+            <span>🎧 Écouter la narration</span><span>{fmt(cur)} / {fmt(dur)}</span>
+          </div>
+        </div>
+      </div>
+      {phrases.length > 0 && (
+        <p style={{ marginTop: 12, marginBottom: 0, fontSize: 14, lineHeight: 1.8 }}>
+          {phrases.map((p, i) => (
+            <span key={i} style={{ background: i === activeIdx ? `${col}33` : 'transparent', color: i === activeIdx ? 'var(--ink)' : 'var(--ink-soft)', borderRadius: 4, padding: '1px 2px', transition: 'background 0.3s' }}>{p}{' '}</span>
+          ))}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -317,6 +361,17 @@ function renderBloc(b) {
     case 'image':     return <BlocImage key={b.id} c={c} />
     default: return null
   }
+}
+
+// Enveloppe chaque bloc : ajoute le lecteur audio au-dessus si contenu.audio_url existe.
+function renderBlocAudio(b) {
+  const c = b.contenu || {}
+  return (
+    <div key={b.id}>
+      {c.audio_url && <AudioBloc audioUrl={c.audio_url} narration={c.narration} couleur={c.couleur} />}
+      {renderBloc(b)}
+    </div>
+  )
 }
 
 function BlocsQuiz({ questions, formation, participant, onFinish }) {
@@ -528,7 +583,7 @@ function BlocsReader({ formation, participant, onClose }) {
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 24px' }}>
         {showQuiz
           ? <BlocsQuiz questions={quiz} formation={formation} participant={participant} onFinish={onClose} />
-          : blocsModule.map(b => renderBloc(b))
+          : blocsModule.map(b => renderBlocAudio(b))
         }
         {!showQuiz && (
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, flexWrap: 'wrap', gap: 12 }}>
