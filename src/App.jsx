@@ -32,7 +32,6 @@ export default function App() {
     localStorage.removeItem('orevy_admin')
     setParticipant(null)
     setIsAdmin(false)
-    window.location.href = 'https://davidbucari-ui.github.io/orevy-solutions/'
   }
 
   if (isAdmin) return <Admin onLogout={handleLogout} />

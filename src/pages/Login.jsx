@@ -62,6 +62,11 @@ export default function Login({ onLogin }) {
           </form>
         </div>
         <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.</p>
+        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #EAE4DA' }}>
+          <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ fontSize: '14px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+            Découvrir Orevy Solutions →
+          </a>
+        </div>
       </div>
     </div>
   )
