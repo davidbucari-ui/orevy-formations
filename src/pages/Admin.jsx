@@ -510,10 +510,11 @@ export default function Admin({ onLogout }) {
                   ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-muted)' }}>Aucune formation</div>
                   : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead><tr><th style={th}>Titre</th><th style={th}>Date</th><th style={th}>Catégorie</th><th style={th}>Séquences</th><th style={th}></th></tr></thead>
+                      <thead><tr><th style={th}>Réf.</th><th style={th}>Titre</th><th style={th}>Date</th><th style={th}>Catégorie</th><th style={th}>Séquences</th><th style={th}></th></tr></thead>
                       <tbody>
                         {formations.map(f => (
                           <tr key={f.id}>
+                            <td style={{ ...td, fontFamily: 'monospace', fontWeight: 600, fontSize: 13, color: 'var(--accent-dark)' }}>{f.reference || '—'}</td>
                             <td style={{ ...td, fontWeight: 500, color: 'var(--ink)' }}>{f.titre}</td>
                             <td style={td}>{formatDate(f.date_session)}</td>
                             <td style={td}>{f.categorie || '—'}</td>
