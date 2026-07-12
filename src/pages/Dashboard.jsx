@@ -312,8 +312,7 @@ function AudioBloc({ audioUrl, narration, couleur }) {
   const totalChars = phrases.reduce((n, p) => n + p.length, 0) || 1
   let activeIdx = -1
   if (dur > 0 && phrases.length) {
-    const LAG = 0.7 // secondes de retard du surlignage (monte à 1.0–1.5 si encore trop vite)
-    const frac = Math.min(Math.max((cur - LAG) / dur, 0), 0.999)
+    const frac = Math.min(cur / dur, 0.999)
     let acc = 0
     for (let i = 0; i < phrases.length; i++) { acc += phrases[i].length / totalChars; if (frac < acc) { activeIdx = i; break } }
     if (activeIdx === -1) activeIdx = phrases.length - 1
@@ -708,7 +707,7 @@ export default function Dashboard({ participant, onLogout }) {
           <div style={{ display: 'flex', gap: 14, marginBottom: 20, flexWrap: 'wrap' }}>
             {f.date_session && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>📅 {formatDate(f.date_session)}</span>}
             {f.duree_minutes && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>⏱ {formatDuration(f.duree_minutes)}</span>}
-            {f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
+            {f.reference && <span className="badge" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{f.reference}</span>}{f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
           </div>
           {f.description && <p style={{ color: 'var(--ink-soft)', marginBottom: 28, lineHeight: 1.7 }}>{f.description}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: chapitres.length > 0 ? '1fr 320px' : '1fr', gap: 20, alignItems: 'start' }}>
@@ -830,7 +829,7 @@ export default function Dashboard({ participant, onLogout }) {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span className={`badge ${acces.vu ? 'badge-seen' : 'badge-new'}`}>{acces.vu ? 'Vu' : 'Nouveau'}</span>
-                          {f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
+                          {f.reference && <span className="badge" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{f.reference}</span>}{f.categorie && <span className="badge badge-pending">{f.categorie}</span>}
                         </div>
                         <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>{f.titre}</p>
                         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
