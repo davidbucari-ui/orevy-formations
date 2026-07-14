@@ -640,7 +640,7 @@ export default function Dashboard({ participant, onLogout }) {
   async function loadCatalogue() {
     if (catalogue !== null) return
     setCatLoading(true)
-    const all = await dbGet('formations', '?order=categorie.asc,titre.asc')
+    const all = await dbGet('formations', '?order=ordre.asc')
     setCatalogue(all)
     setCatLoading(false)
   }
@@ -877,6 +877,7 @@ export default function Dashboard({ participant, onLogout }) {
                               {owned
                                 ? <span className="badge badge-seen">Accessible</span>
                                 : <span className="badge badge-pending">Sur demande</span>}
+                              {f.reference && <span className="badge" style={{ fontFamily: 'monospace', fontWeight: 600 }}>{f.reference}</span>}
                               {f.duree_minutes && <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>⏱ {formatDuration(f.duree_minutes)}</span>}
                             </div>
                             <p style={{ fontWeight: 600, fontSize: 16, marginBottom: 6, color: 'var(--ink)' }}>{f.titre}</p>
