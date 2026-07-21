@@ -86,6 +86,73 @@ function BlocReflexion({ c }) {
   )
 }
 
+// ── Blocs éditoriaux (retenir / citation / comparaison / essayer) ──
+function BlocRetenir({ c }) {
+  const points = (c.points || []).filter(p => p && p.trim())
+  return (
+    <div style={{ background: 'var(--warm-white,#FEF9F6)', border: '1px solid var(--border,#E8E0D8)', borderLeft: '4px solid #3D8A7A', borderRadius: '0 12px 12px 0', padding: '16px 20px', marginBottom: 16 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#3D8A7A', marginBottom: 10 }}>{c.titre || 'À retenir'}</p>
+      <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {points.map((p, i) => (
+          <li key={i} style={{ display: 'flex', gap: 10, fontSize: 14, color: 'var(--ink-soft,#5C4A3A)', lineHeight: 1.6 }}>
+            <span style={{ color: '#3D8A7A', flexShrink: 0, marginTop: 1 }}>•</span>{p}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function BlocCitation({ c }) {
+  return (
+    <blockquote style={{ borderLeft: '4px solid #E07A5F', margin: '0 0 16px', padding: '4px 0 4px 20px', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: 17, lineHeight: 1.7, color: '#1E3A5F' }}>
+      {(c.texte || '').split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
+    </blockquote>
+  )
+}
+
+function BlocComparaison({ c }) {
+  const plutot = (c.plutot || []).filter(x => x && x.trim())
+  const eviter = (c.eviter || []).filter(x => x && x.trim())
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {c.intro && <p style={{ fontSize: 14, color: 'var(--ink-soft,#5C4A3A)', lineHeight: 1.7, marginBottom: 12 }}>{c.intro}</p>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ background: '#3D8A7A12', border: '1px solid #3D8A7A30', borderRadius: 12, padding: '14px 16px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#2E6B5E', marginBottom: 8 }}>Plutôt</p>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {plutot.map((x, i) => <li key={i} style={{ fontSize: 13.5, color: 'var(--ink-soft,#5C4A3A)', lineHeight: 1.5 }}>✓ {x}</li>)}
+          </ul>
+        </div>
+        <div style={{ background: '#E07A5F12', border: '1px solid #E07A5F30', borderRadius: 12, padding: '14px 16px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#B0492F', marginBottom: 8 }}>À éviter</p>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {eviter.map((x, i) => <li key={i} style={{ fontSize: 13.5, color: 'var(--ink-soft,#5C4A3A)', lineHeight: 1.5 }}>✗ {x}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BlocEssayer({ c }) {
+  const etapes = c.etapes || []
+  return (
+    <div style={{ background: '#E07A5F10', border: '1px solid #E07A5F30', borderRadius: 14, padding: '20px 24px', marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#E07A5F', marginBottom: 8 }}>{c.label || 'À essayer cette semaine'}</div>
+      {c.titre && <h3 style={{ fontSize: 16, color: 'var(--ink,#3D2318)', margin: '0 0 12px' }}>{c.titre}</h3>}
+      <ol style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8, margin: 0 }}>
+        {etapes.map((e, i) => (
+          <li key={i} style={{ fontSize: 14, color: 'var(--ink-soft,#5C4A3A)', lineHeight: 1.6 }}>
+            {e.titre && <strong style={{ color: 'var(--ink,#3D2318)' }}>{e.titre} </strong>}{e.texte}
+          </li>
+        ))}
+      </ol>
+      {c.note && <p style={{ fontSize: 13, color: 'var(--ink-muted,#A0887A)', marginTop: 12, fontStyle: 'italic' }}>{c.note}</p>}
+    </div>
+  )
+}
+
 function renderBloc(b) {
   const c = b.contenu || {}
   switch (b.type) {
@@ -94,6 +161,10 @@ function renderBloc(b) {
     case 'principe':  return <BlocPrincipe key={b.id} c={c} />
     case 'erreur':    return <BlocErreur key={b.id} c={c} />
     case 'reflexion': return <BlocReflexion key={b.id} c={c} />
+    case 'retenir':     return <BlocRetenir key={b.id} c={c} />
+    case 'citation':    return <BlocCitation key={b.id} c={c} />
+    case 'comparaison': return <BlocComparaison key={b.id} c={c} />
+    case 'essayer':     return <BlocEssayer key={b.id} c={c} />
     default: return null
   }
 }
