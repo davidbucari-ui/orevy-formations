@@ -1,8 +1,10 @@
 import { useState } from 'react'
 
 const BASE = 'https://orevy-proxy.david-bucari.workers.dev/supabase/formations/rest/v1'
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
-const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
+/* Aucune cle Supabase ici : BASE passe par la route /supabase/... du Worker,
+   qui ajoute lui-meme la cle du projet. Une cle publiee dans le bundle est
+   lisible par quiconque affiche le source du site. */
+const H = { 'Content-Type': 'application/json' }
 const ADMIN_CODE = 'OREVY-ADMIN-2025'
 
 export default function Login({ onLogin }) {

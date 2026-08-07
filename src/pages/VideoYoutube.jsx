@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 
 const WORKER_URL = 'https://orevy-proxy.david-bucari.workers.dev'
-const BASE = `${WORKER_URL}/rest/v1`
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdva2Z4ZWpvZmZ6dHR6dmRrb2xsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDMxNjQ0NCwiZXhwIjoyMDk1ODkyNDQ0fQ.X1BYaEYHHDNTh6I0MXTX0ZjOSQjTAeBiAuMgJH1YSV0'
-const H = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Prefer': 'return=representation' }
+/* /rest/v1 a la racine du Worker ne correspond a aucune route : cet ecran
+   recevait un 400 depuis toujours. La bonne route est /supabase/{projet}/...
+   et le Worker y injecte sa propre cle — aucune cle a declarer ici. */
+const BASE = `${WORKER_URL}/supabase/formations/rest/v1`
+const H = { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
 
 export default function VideoYoutube() {
   const [query, setQuery] = useState('')
