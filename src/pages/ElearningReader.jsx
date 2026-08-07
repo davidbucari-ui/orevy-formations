@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 
 // ── Projet Formations yyqpp — accès direct
 const F_BASE = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
-const F_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjAxODYsImV4cCI6MjA5NjY5NjE4Nn0.mzejn3GMcVF4grWp9BbpW9p2p_7zK8F9yefO4MRr8qg'
-const F_H = { 'Content-Type': 'application/json', 'apikey': F_KEY, 'Authorization': 'Bearer ' + F_KEY }
+/* Cle « publishable » : elle n'est PAS un JWT et Supabase la REFUSE dans
+   Authorization: Bearer — on ne pose que l'en-tete apikey.
+   Ne pas remettre de Bearer ici, et ne jamais replacer de cle a droits
+   eleves dans un fichier compile dans le bundle : il est public. */
+const F_KEY = 'sb_publishable_gqoHyQO8sj2Xjt8cuspmWA_AwK4v9BZ'
+const F_H = { 'Content-Type': 'application/json', 'apikey': F_KEY }
 
 async function fGet(table, params = '') {
   const r = await fetch(`${F_BASE}/${table}${params}`, { headers: F_H })

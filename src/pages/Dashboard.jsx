@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 
 const BASE_F = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
-const KEY_F = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
-const H_F = { 'Content-Type': 'application/json', 'apikey': KEY_F, 'Authorization': 'Bearer ' + KEY_F }
+/* Cle « publishable » : elle n'est PAS un JWT et Supabase la REFUSE dans
+   Authorization: Bearer — on ne pose que l'en-tete apikey.
+   Ne pas remettre de Bearer ici, et ne jamais replacer de cle a droits
+   eleves dans un fichier compile dans le bundle : il est public. */
+const KEY_F = 'sb_publishable_gqoHyQO8sj2Xjt8cuspmWA_AwK4v9BZ'
+const H_F = { 'Content-Type': 'application/json', 'apikey': KEY_F }
 
 // Adresse de contact pour les demandes d'accès depuis le catalogue (à adapter)
 const CONTACT_EMAIL = 'david.bucari@gmail.com'

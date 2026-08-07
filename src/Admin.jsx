@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 
 // ── Projet Orevy Formations — Supabase yyqppsvihdgmohnuocqr ──────────────────
 const BASE = 'https://yyqppsvihdgmohnuocqr.supabase.co/rest/v1'
-const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cXBwc3ZpaGRnbW9obnVvY3FyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyMDE4NiwiZXhwIjoyMDk2Njk2MTg2fQ.GVAjwcHDC-IO96BXcrXyZP_mVjrvCcdxdHMKmGuzJ3E'
-const H    = { 'Content-Type': 'application/json', 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Prefer': 'return=representation' }
+/* Cle « publishable » : elle n'est PAS un JWT et Supabase la REFUSE dans
+   Authorization: Bearer — on ne pose que l'en-tete apikey.
+   Ne pas remettre de Bearer ici, et ne jamais replacer de cle a droits
+   eleves dans un fichier compile dans le bundle : il est public. */
+const KEY = 'sb_publishable_gqoHyQO8sj2Xjt8cuspmWA_AwK4v9BZ'
+const H    = { 'Content-Type': 'application/json', 'apikey': KEY, 'Prefer': 'return=representation' }
 
 // ── TAG couleurs ─────────────────────────────────────────────────────────────
 const TAG_COLORS = {
