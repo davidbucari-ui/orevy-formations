@@ -5,7 +5,6 @@ const BASE = 'https://orevy-proxy.david-bucari.workers.dev/supabase/formations/r
    qui ajoute lui-meme la cle du projet. Une cle publiee dans le bundle est
    lisible par quiconque affiche le source du site. */
 const H = { 'Content-Type': 'application/json' }
-const ADMIN_CODE = 'OREVY-ADMIN-2025'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -20,12 +19,10 @@ export default function Login({ onLogin }) {
     const emailClean = email.trim().toLowerCase()
     const codeClean = code.trim().toUpperCase()
 
-    if (codeClean === ADMIN_CODE) {
-      onLogin({ isAdmin: true, email: emailClean, code_acces: ADMIN_CODE })
-      setLoading(false)
-      return
-    }
-
+    /* Le droit d'administration est porte par la fiche participant
+       (colonne is_admin), plus par un code ecrit dans le code source :
+       tout ce qui est compile dans le bundle est lisible publiquement.
+       Un seul chemin de connexion pour tout le monde. */
     const r = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`, { headers: H })
     const data = await r.json()
 
@@ -35,8 +32,10 @@ export default function Login({ onLogin }) {
       return
     }
 
-    localStorage.setItem('orevy_participant', JSON.stringify(data[0]))
-    onLogin(data[0])
+    const participant = { ...data[0], isAdmin: data[0].is_admin === true }
+
+    localStorage.setItem('orevy_participant', JSON.stringify(participant))
+    onLogin(participant)
     setLoading(false)
   }
 
