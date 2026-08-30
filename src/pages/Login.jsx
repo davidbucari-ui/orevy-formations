@@ -19,10 +19,11 @@ export default function Login({ onLogin }) {
        (colonne is_admin), plus par un code ecrit dans le code source :
        tout ce qui est compile dans le bundle est lisible publiquement.
        Un seul chemin de connexion pour tout le monde. */
-       try {
-            const data = await r.json()
+       try {   
+         const r = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`) 
+         const data = await r.json()
 
-      if (!r.ok || !data || data.length === 0) {
+         if (!r.ok || !data || data.length === 0) {     
         setError("Email ou code d'accès incorrect.")
         return
       }
