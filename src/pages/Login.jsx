@@ -1,10 +1,6 @@
 import { useState } from 'react'
 
 const BASE = 'https://orevy-proxy.david-bucari.workers.dev/supabase/formations/rest/v1'
-/* Aucune cle Supabase ici : BASE passe par la route /supabase/... du Worker,
-   qui ajoute lui-meme la cle du projet. Une cle publiee dans le bundle est
-   lisible par quiconque affiche le source du site. */
-const H = { 'Content-Type': 'application/json' }
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -23,20 +19,22 @@ export default function Login({ onLogin }) {
        (colonne is_admin), plus par un code ecrit dans le code source :
        tout ce qui est compile dans le bundle est lisible publiquement.
        Un seul chemin de connexion pour tout le monde. */
-    const r = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`, { headers: H })
-    const data = await r.json()
+       try {
+            const data = await r.json()
 
-    if (!r.ok || !data || data.length === 0) {
-      setError("Email ou code d'accès incorrect.")
+      if (!r.ok || !data || data.length === 0) {
+        setError("Email ou code d'accès incorrect.")
+        return
+      }
+
+      localStorage.setItem('orevy_participant', JSON.stringify(data[0]))
+      onLogin(data[0])
+    } catch (err) {
+      console.error('Login:', err)
+      setError("Connexion au serveur impossible. Réessayez dans un instant.")
+    } finally {
       setLoading(false)
-      return
     }
-
-    const participant = { ...data[0], isAdmin: data[0].is_admin === true }
-
-    localStorage.setItem('orevy_participant', JSON.stringify(participant))
-    onLogin(participant)
-    setLoading(false)
   }
 
   return (
