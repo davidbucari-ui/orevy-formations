@@ -2,19 +2,24 @@ import { useEffect, useMemo, useState } from 'react'
 
 /* Diaporama des slides SVG d'une formation, groupées par sequence_num.
    Le SVG est injecté tel quel : il n'est modifiable que par un admin (RLS). */
-export default function LecteurSlides({ titre, slides, onClose }) {
+export default function LecteurSlides({ titre, slides, onClose, sequenceInitiale, onLu = () => {} }) {
   const sequences = useMemo(() => {
     const parNum = {}
     slides.forEach(s => { (parNum[s.sequence_num ?? 1] ||= []).push(s) })
-    return Object.entries(parNum).sort(([a], [b]) => a - b).map(([num, liste]) => ({ num, slides: liste }))
+    return Object.entries(parNum).sort(([a], [b]) => a - b).map(([num, liste]) => ({ num: Number(num), slides: liste }))
   }, [slides])
-  const [seq, setSeq] = useState(0)
+  const [seq, setSeq] = useState(() => Math.max(0, sequences.findIndex(s => s.num === sequenceInitiale)))
   const [idx, setIdx] = useState(0)
 
   const courante = sequences[seq]
   const slide = courante.slides[idx]
   const premiere = seq === 0 && idx === 0
   const derniere = seq === sequences.length - 1 && idx === courante.slides.length - 1
+
+  // Une séquence est lue quand on atteint sa dernière diapositive.
+  useEffect(() => {
+    if (idx === courante.slides.length - 1) onLu(courante.num)
+  }, [seq, idx])
 
   function prec() {
     if (idx > 0) setIdx(idx - 1)

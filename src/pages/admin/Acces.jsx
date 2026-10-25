@@ -3,22 +3,27 @@ import { supabase, q } from '../../lib/supabase'
 import { formatDate, messageErreur } from '../../lib/format'
 import { Vide } from '../../components/ui'
 
-export default function Acces({ formations, participants, acces, recharger, setMessage }) {
-  const [participantId, setParticipantId] = useState('')
+export default function Acces({ formations, participants, acces, structures, recharger, setMessage }) {
+  const [cible, setCible] = useState('')   // 'p:<id participant>' ou 's:<id structure>'
   const [choisies, setChoisies] = useState([])
   const [saving, setSaving] = useState(false)
   const [filtre, setFiltre] = useState('')
 
-  const dejaOuvertes = new Set(acces.filter(a => String(a.participant_id) === participantId).map(a => String(a.formation_id)))
+  const [genre, id] = cible ? cible.split(':') : []
+  const membres = genre === 's' ? participants.filter(p => p.structure_id === id) : participants.filter(p => p.id === id)
+  const nomCible = genre === 's' ? `${membres.length} participant${membres.length > 1 ? 's' : ''} de ${structures.find(x => x.id === id)?.nom}` : membres[0]?.nom
+  const aDeja = (pid, fid) => acces.some(a => a.participant_id === pid && a.formation_id === fid)
+  // Une formation est « déjà ouverte » quand tous les participants visés l'ont.
+  const dejaOuverte = fid => membres.length > 0 && membres.every(p => aDeja(p.id, fid))
 
   async function ouvrir(e) {
     e.preventDefault()
-    if (!choisies.length) return
+    const lignes = membres.flatMap(p => choisies.filter(fid => !aDeja(p.id, fid)).map(fid => ({ participant_id: p.id, formation_id: fid })))
+    if (!lignes.length) return
     setSaving(true)
-    const p = participants.find(x => String(x.id) === participantId)
     try {
-      await q(supabase.from('acces_formations').insert(choisies.map(fid => ({ participant_id: p.id, formation_id: formations.find(f => String(f.id) === fid).id }))))
-      setMessage({ texte: `${choisies.length} formation${choisies.length > 1 ? 's' : ''} ouverte${choisies.length > 1 ? 's' : ''} à ${p.nom}.` })
+      await q(supabase.from('acces_formations').insert(lignes))
+      setMessage({ texte: `${choisies.length} formation${choisies.length > 1 ? 's' : ''} ouverte${choisies.length > 1 ? 's' : ''} à ${nomCible} (${lignes.length} accès créé${lignes.length > 1 ? 's' : ''}).` })
       setChoisies([]); recharger()
     } catch (err) { setMessage({ erreur: true, texte: messageErreur(err) }) }
     setSaving(false)
@@ -41,24 +46,32 @@ export default function Acces({ formations, participants, acces, recharger, setM
   return (
     <div>
       <form className="card formulaire" onSubmit={ouvrir}>
-        <p style={{ fontWeight: 600, marginBottom: 14 }}>Ouvrir des formations à un participant</p>
+        <p style={{ fontWeight: 600, marginBottom: 14 }}>Ouvrir des formations à un participant ou à toute une structure</p>
         <div className="field">
-          <label>Participant</label>
-          <select value={participantId} onChange={e => { setParticipantId(e.target.value); setChoisies([]) }} required>
+          <label htmlFor="acces-cible">Pour</label>
+          <select id="acces-cible" value={cible} onChange={e => { setCible(e.target.value); setChoisies([]) }} required>
             <option value="">— Choisir —</option>
-            {participants.map(p => <option key={p.id} value={String(p.id)}>{p.nom} ({p.email})</option>)}
+            {structures.length > 0 && (
+              <optgroup label="Structures (tous leurs participants)">
+                {structures.map(s => <option key={s.id} value={`s:${s.id}`}>{s.nom} ({participants.filter(p => p.structure_id === s.id).length})</option>)}
+              </optgroup>
+            )}
+            <optgroup label="Participants">
+              {participants.map(p => <option key={p.id} value={`p:${p.id}`}>{p.nom} ({p.email})</option>)}
+            </optgroup>
           </select>
+          {genre === 's' && membres.length === 0 && <p className="aide">Cette structure n'a encore aucun participant.</p>}
         </div>
-        {participantId && (
+        {cible && membres.length > 0 && (
           <div className="field">
             <label>Formations</label>
             <div className="cases">
               {formations.map(f => {
-                const id = String(f.id), deja = dejaOuvertes.has(id)
+                const fid = f.id, deja = dejaOuverte(fid)
                 return (
-                  <label key={id} className={`case ${deja ? 'inactif' : ''}`}>
-                    <input type="checkbox" disabled={deja} checked={deja || choisies.includes(id)}
-                      onChange={e => setChoisies(e.target.checked ? [...choisies, id] : choisies.filter(x => x !== id))} />
+                  <label key={fid} className={`case ${deja ? 'inactif' : ''}`}>
+                    <input type="checkbox" disabled={deja} checked={deja || choisies.includes(fid)}
+                      onChange={e => setChoisies(e.target.checked ? [...choisies, fid] : choisies.filter(x => x !== fid))} />
                     {f.reference && <span className="badge badge-ref">{f.reference}</span>} {f.titre} {deja && <em>(déjà ouverte)</em>}
                   </label>
                 )

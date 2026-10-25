@@ -6,10 +6,11 @@ import Formations from './Formations'
 import FormationEditeur from './FormationEditeur'
 import Participants from './Participants'
 import Acces from './Acces'
+import Suivi from './Suivi'
 
 export default function Admin({ onLogout, onVueParticipant }) {
-  const [onglet, setOnglet] = useState('formations')
-  const [donnees, setDonnees] = useState(null)   // { formations, participants, acces }
+  const [onglet, setOnglet] = useState('suivi')
+  const [donnees, setDonnees] = useState(null)   // { formations, participants, acces, structures, envois }
   const [message, setMessage] = useState(null)
   const [edition, setEdition] = useState(null)   // formation éditée, ou {} pour une nouvelle
 
@@ -17,12 +18,14 @@ export default function Admin({ onLogout, onVueParticipant }) {
 
   async function charger() {
     try {
-      const [formations, participants, acces] = await Promise.all([
+      const [formations, participants, acces, structures, envois] = await Promise.all([
         q(supabase.from('formations').select('*').order('ordre', { ascending: true, nullsFirst: false }).order('titre')),
         q(supabase.from('participants').select('*').order('nom')),
         q(supabase.from('acces_formations').select('*')),
+        q(supabase.from('structures').select('*').order('nom')),
+        q(supabase.from('envois').select('participant_id, type, statut, envoye_le').order('envoye_le', { ascending: false }).limit(1000)),
       ])
-      setDonnees({ formations, participants, acces })
+      setDonnees({ formations, participants, acces, structures, envois })
     } catch (err) { setMessage({ erreur: true, texte: messageErreur(err) }) }
   }
 
@@ -41,11 +44,13 @@ export default function Admin({ onLogout, onVueParticipant }) {
       <main className="page">
         <Alerte message={message} />
         <Onglets actif={onglet} onChange={o => { setOnglet(o); setMessage(null) }} onglets={[
+          ['suivi', 'Suivi'],
           ['formations', `Formations${donnees ? ` (${donnees.formations.length})` : ''}`],
           ['participants', `Participants${donnees ? ` (${donnees.participants.length})` : ''}`],
           ['acces', `Accès${donnees ? ` (${donnees.acces.length})` : ''}`],
         ]} />
         {!donnees ? <p className="vide">Chargement…</p>
+          : onglet === 'suivi' ? <Suivi {...props} />
           : onglet === 'formations' ? <Formations {...props} onEditer={setEdition} />
           : onglet === 'participants' ? <Participants {...props} />
           : <Acces {...props} />}

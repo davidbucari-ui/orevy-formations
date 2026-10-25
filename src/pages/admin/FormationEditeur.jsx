@@ -3,7 +3,7 @@ import { supabase, q } from '../../lib/supabase'
 import { messageErreur } from '../../lib/format'
 import { Entete, Onglets, Alerte } from '../../components/ui'
 import ListeEditable, { Champ } from '../../components/ListeEditable'
-import { Bloc, TYPES_BLOCS } from '../../components/Blocs'
+import EditeurBlocs from './EditeurBlocs'
 
 const CHAMPS_FORMATION = [
   { nom: 'titre', libelle: 'Titre', requis: true, large: true, placeholder: 'Ex : Accueil du jeune enfant' },
@@ -14,6 +14,7 @@ const CHAMPS_FORMATION = [
   { nom: 'duree_minutes', libelle: 'Durée (minutes)', type: 'number', placeholder: '90' },
   { nom: 'lien_video', libelle: 'Lien vidéo de la session', large: true, placeholder: 'https://…', aide: 'Facultatif : enregistrement Teams, YouTube…' },
   { nom: 'ordre', libelle: 'Ordre dans le catalogue', type: 'number', aide: 'Les plus petits nombres apparaissent en premier.' },
+  { nom: 'seuil_reussite', libelle: 'Seuil de réussite du quiz (%)', type: 'number', aide: 'Part de bonnes réponses pour valider la formation. 70 par défaut.' },
   { nom: 'slug', libelle: 'Identifiant (slug)', placeholder: 'accueil-jeune-enfant', aide: 'Unique. Laissé vide, il est déduit du titre.' },
 ]
 
@@ -38,35 +39,7 @@ export default function FormationEditeur({ formation: initiale, onClose }) {
         )}
         {onglet === 'infos' && <Infos formation={formation} onSaved={setFormation} />}
 
-        {onglet === 'blocs' && (
-          <ListeEditable key="blocs" table="formation_blocs" formationId={formation.id} tri={['sequence_num', 'ordre']} libelleAjout="Nouveau bloc"
-            nouveau={l => {
-              const mod = l.length ? Math.max(...l.map(b => b.sequence_num || 1)) : 1
-              return { type: 'seq', sequence_num: mod, ordre: suivant(l.filter(b => b.sequence_num === mod), 'ordre'), contenu: { titre: '', desc: '' } }
-            }}
-            champs={[
-              { nom: 'type', libelle: 'Type de bloc', type: 'select', requis: true, options: TYPES_BLOCS.map(t => [t, t]) },
-              { nom: 'sequence_num', libelle: 'Module n°', type: 'number', requis: true },
-              { nom: 'ordre', libelle: 'Ordre dans le module', type: 'number', requis: true },
-              { nom: 'contenu', libelle: 'Contenu (JSON)', type: 'textarea', large: true, lignes: 12,
-                aide: 'Champs selon le type : titre, desc, points[], tip, couleur, emoji, question, items[], url, legende… Ajoutez audio_url et narration pour une narration audio.' },
-            ]}
-            versFormulaire={(f, base) => ({ ...f, contenu: JSON.stringify(base.contenu ?? {}, null, 2) })}
-            versBase={c => {
-              let contenu
-              try { contenu = JSON.parse(c.contenu || '{}') } catch { throw new Error('Le contenu n\'est pas un JSON valide (vérifiez les guillemets et les virgules).') }
-              return { ...c, contenu }
-            }}
-            resume={b => (
-              <details>
-                <summary style={{ cursor: 'pointer' }}>
-                  <strong>Module {b.sequence_num} · {b.ordre}</strong> <span className="badge badge-pending">{b.type}</span>{' '}
-                  {b.contenu?.audio_url && '🎧 '}{b.contenu?.titre || b.contenu?.question || b.contenu?.texte || ''}
-                </summary>
-                <div style={{ marginTop: 12 }}><Bloc b={b} /></div>
-              </details>
-            )} />
-        )}
+        {onglet === 'blocs' && <EditeurBlocs formation={formation} />}
 
         {onglet === 'chapitres' && (
           <ListeEditable key="chapitres" table="chapitres" formationId={formation.id} tri={['ordre']} libelleAjout="Nouvelle séquence"

@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, q } from '../../lib/supabase'
 import { formatDate, formatDuree, messageErreur } from '../../lib/format'
+import { modulesDe, meilleurResultat } from '../../lib/parcours'
 import { Entete, Vide } from '../../components/ui'
 import LecteurSlides from '../../components/LecteurSlides'
-import Quiz from '../../components/Quiz'
 import LecteurBlocs from '../../components/LecteurBlocs'
+import Quiz, { imprimerAttestation } from '../../components/Quiz'
 
 export default function FormationVue({ acces, participant, onClose }) {
   const f = acces.formation
   const [contenu, setContenu] = useState(null)
+  const [lus, setLus] = useState(new Set())
+  const lusRef = useRef(new Set())   // à jour même dans les écouteurs créés plus tôt
+  const [resultats, setResultats] = useState([])
   const [mode, setMode] = useState('accueil')   // 'accueil' | 'slides' | 'blocs' | 'quiz'
+  const [depart, setDepart] = useState(null)    // module ouvert par le lecteur
   const [erreur, setErreur] = useState('')
 
   useEffect(() => {
@@ -18,14 +23,43 @@ export default function FormationVue({ acces, participant, onClose }) {
       q(supabase.from('chapitres').select('*').eq('formation_id', f.id).order('ordre')),
       q(supabase.from('ressources').select('*').eq('formation_id', f.id).order('created_at')),
       q(supabase.from('slides').select('*').eq('formation_id', f.id).order('sequence_num').order('ordre')),
-      q(supabase.from('formation_quiz').select('*').eq('formation_id', f.id).order('module_num').order('ordre')),
+      q(supabase.rpc('quiz_questions', { fid: f.id })),
       q(supabase.from('formation_blocs').select('*').eq('formation_id', f.id).order('sequence_num').order('ordre')),
+      q(supabase.from('progression').select('module_num').eq('formation_id', f.id).eq('participant_id', participant.id)),
+      q(supabase.from('resultats_quiz').select('*').eq('formation_id', f.id).eq('participant_id', participant.id).order('passe_le', { ascending: false })),
     ])
-      .then(([chapitres, ressources, slides, quiz, blocs]) => setContenu({ chapitres, ressources, slides, quiz, blocs }))
+      .then(([chapitres, ressources, slides, quiz, blocs, prog, res]) => {
+        setContenu({ chapitres, ressources, slides, quiz, blocs })
+        lusRef.current = new Set(prog.map(p => p.module_num))
+        setLus(new Set(lusRef.current))
+        setResultats(res)
+      })
       .catch(err => setErreur(messageErreur(err)))
   }, [f.id])
 
-  if (mode === 'slides') return <LecteurSlides titre={f.titre} slides={contenu.slides} onClose={() => setMode('accueil')} />
+  const modules = useMemo(() => contenu ? modulesDe(contenu.blocs, contenu.slides) : [], [contenu])
+
+  function marquerLu(num) {
+    if (lusRef.current.has(num)) return
+    lusRef.current.add(num)
+    setLus(new Set(lusRef.current))
+    supabase.rpc('marquer_module_lu', { fid: f.id, module: num }).then(() => {})
+  }
+
+  function ouvrir(num) {
+    setDepart(num)
+    setMode(contenu.blocs.length ? 'blocs' : 'slides')
+    window.scrollTo(0, 0)
+  }
+
+  if (mode === 'slides') {
+    return <LecteurSlides titre={f.titre} slides={contenu.slides} sequenceInitiale={depart} onLu={marquerLu} onClose={() => setMode('accueil')} />
+  }
+
+  const aQuiz = contenu?.quiz.length > 0
+  const meilleur = meilleurResultat(resultats)
+  const prochain = modules.find(m => !lus.has(m.num))
+  const pct = modules.length ? Math.round((lus.size / modules.length) * 100) : 0
 
   return (
     <div>
@@ -33,9 +67,12 @@ export default function FormationVue({ acces, participant, onClose }) {
       <main className="page page-etroite">
         {erreur && <div className="alerte alerte-erreur">{erreur}</div>}
         {!contenu ? <Vide>Chargement…</Vide> : mode === 'quiz' ? (
-          <Quiz questions={contenu.quiz} formation={f} participant={participant} onFinish={() => setMode('accueil')} />
+          <Quiz questions={contenu.quiz} formation={f} participant={participant}
+            onResultat={r => setResultats(prev => [{ ...r, id: `local-${Date.now()}` }, ...prev])}
+            onFinish={() => setMode('accueil')} />
         ) : mode === 'blocs' ? (
-          <LecteurBlocs formation={f} blocs={contenu.blocs} aQuiz={contenu.quiz.length > 0} onQuiz={() => { setMode('quiz'); window.scrollTo(0, 0) }} />
+          <LecteurBlocs formation={f} blocs={contenu.blocs} modules={modules} lus={lus} moduleInitial={depart}
+            aQuiz={aQuiz} onLu={marquerLu} onQuiz={() => { setMode('quiz'); window.scrollTo(0, 0) }} />
         ) : (
           <>
             <h1 style={{ fontSize: 28, marginBottom: 8 }}>{f.titre}</h1>
@@ -45,22 +82,68 @@ export default function FormationVue({ acces, participant, onClose }) {
               {f.date_session && <span>📅 {formatDate(f.date_session)}</span>}
               {f.duree_minutes && <span>⏱ {formatDuree(f.duree_minutes)}</span>}
             </p>
-            {f.description && <p style={{ color: 'var(--ink-soft)', marginBottom: 28, lineHeight: 1.7 }}>{f.description}</p>}
+            {(f.sous_titre || f.description) && <p style={{ color: 'var(--ink-soft)', marginBottom: 28, lineHeight: 1.7 }}>{f.description || f.sous_titre}</p>}
 
             <div className="pile">
-              {contenu.blocs.length > 0 && (() => {
-                const n = new Set(contenu.blocs.map(b => b.sequence_num)).size
-                return (
-                  <Bloc titre="📖 Parcours e-learning" texte={`${n} module${n > 1 ? 's' : ''} à suivre à votre rythme, avec narration audio sur certains passages.`}>
-                    <button className="btn-primary" onClick={() => { setMode('blocs'); window.scrollTo(0, 0) }}>Commencer le parcours →</button>
-                  </Bloc>
-                )
-              })()}
-              {contenu.slides.length > 0 && (
-                <Bloc titre="📖 Support de formation" texte={`${contenu.slides.length} diapositive${contenu.slides.length > 1 ? 's' : ''}`}>
-                  <button className="btn-primary" onClick={() => setMode('slides')}>Ouvrir le support →</button>
-                </Bloc>
+              {modules.length > 0 && (
+                <section className="card parcours">
+                  <div className="parcours-tete">
+                    <div>
+                      <p style={{ fontWeight: 600 }}>{contenu.blocs.length ? '📖 Votre parcours' : '📖 Support de formation'}</p>
+                      <p className="sous">{lus.size} sur {modules.length} module{modules.length > 1 ? 's' : ''} · environ {modules.reduce((t, m) => t + m.duree, 0)} min au total</p>
+                    </div>
+                    <button className="btn-primary" onClick={() => ouvrir((prochain || modules[0]).num)}>
+                      {lus.size === 0 ? 'Commencer' : prochain ? `Reprendre : module ${prochain.rang}` : 'Relire'} →
+                    </button>
+                  </div>
+                  <div className="jauge" aria-label={`${pct} % du parcours lu`}><div style={{ width: `${pct}%` }} /></div>
+                  <ol className="liste-modules">
+                    {modules.map(m => (
+                      <li key={m.num}>
+                        <button className={lus.has(m.num) ? 'lu' : ''} onClick={() => ouvrir(m.num)}>
+                          <span className="module-num">{lus.has(m.num) ? '✓' : m.rang}</span>
+                          <span className="module-titre">{m.titre}</span>
+                          <span className="module-duree">{m.duree} min</span>
+                        </button>
+                      </li>
+                    ))}
+                    {aQuiz && (
+                      <li>
+                        <button className={meilleur?.reussi ? 'lu' : ''} onClick={() => { setMode('quiz'); window.scrollTo(0, 0) }}>
+                          <span className="module-num">{meilleur?.reussi ? '✓' : '★'}</span>
+                          <span className="module-titre">Quiz final</span>
+                          <span className="module-duree">{contenu.quiz.length} questions</span>
+                        </button>
+                      </li>
+                    )}
+                  </ol>
+                </section>
               )}
+
+              {aQuiz && (
+                <section className="card" style={{ padding: 24 }}>
+                  <p style={{ fontWeight: 600, marginBottom: 4 }}>📝 Quiz d'évaluation</p>
+                  {meilleur?.reussi ? (
+                    <>
+                      <p className="sous" style={{ marginBottom: 16 }}>Formation validée le {formatDate(meilleur.passe_le)} avec {meilleur.score}/{meilleur.total}.</p>
+                      <div className="actions">
+                        <button className="btn-primary" onClick={() => imprimerAttestation(f, participant, meilleur)}>🖨 Télécharger l'attestation</button>
+                        <button className="btn-secondary" onClick={() => setMode('quiz')}>Repasser le quiz</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="sous" style={{ marginBottom: 16 }}>
+                        {meilleur ? `Meilleur score : ${meilleur.score}/${meilleur.total}. ` : ''}
+                        {f.seuil_reussite ?? 70} % de bonnes réponses pour valider la formation et obtenir l'attestation.
+                        {prochain && contenu.blocs.length ? ' Conseil : terminez le parcours avant.' : ''}
+                      </p>
+                      <button className="btn-primary" onClick={() => setMode('quiz')}>{meilleur ? 'Retenter le quiz' : 'Commencer le quiz'} →</button>
+                    </>
+                  )}
+                </section>
+              )}
+
               {f.lien_video && (
                 <Bloc titre="🎬 Session complète" texte="Regarder l'enregistrement intégral.">
                   <a href={f.lien_video} target="_blank" rel="noopener noreferrer" className="btn-primary">Regarder la session →</a>
@@ -82,12 +165,7 @@ export default function FormationVue({ acces, participant, onClose }) {
                   </div>
                 </Bloc>
               )}
-              {contenu.quiz.length > 0 && (
-                <Bloc titre="📝 Quiz d'évaluation" texte={`${contenu.quiz.length} questions — réussissez-le pour obtenir votre attestation.`}>
-                  <button className="btn-primary" onClick={() => setMode('quiz')}>Commencer le quiz →</button>
-                </Bloc>
-              )}
-              {!f.lien_video && !contenu.blocs.length && !contenu.slides.length && !contenu.chapitres.length && !contenu.ressources.length && !contenu.quiz.length &&
+              {!f.lien_video && !modules.length && !contenu.chapitres.length && !contenu.ressources.length && !aQuiz &&
                 <Vide>Le contenu de cette formation sera bientôt disponible.</Vide>}
             </div>
           </>

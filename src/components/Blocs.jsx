@@ -70,11 +70,19 @@ function BlocErreur({ c }) {
   )
 }
 
-function BlocReflexion({ c }) {
+function BlocReflexion({ b, c }) {
+  const cle = `orevy-note-${b.id}`
+  const [note, setNote] = useState(() => { try { return localStorage.getItem(cle) || '' } catch { return '' } })
+  function ecrire(v) {
+    setNote(v)
+    try { v ? localStorage.setItem(cle, v) : localStorage.removeItem(cle) } catch { /* stockage indisponible */ }
+  }
   return (
     <div style={{ background: 'linear-gradient(135deg, #EDE9FE, #F5F3FF)', border: '1px solid #C4B5FD', borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
       <p style={{ fontSize: 12, fontWeight: 700, color: '#6D28D9', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>🤔 Question de réflexion</p>
-      <p style={{ fontSize: 15, color: '#4C1D95', lineHeight: 1.7, fontStyle: 'italic' }}>{c.question}</p>
+      <p style={{ fontSize: 15, color: '#4C1D95', lineHeight: 1.7, fontStyle: 'italic', marginBottom: 12 }}>{c.question}</p>
+      <textarea className="bloc-saisie" rows={3} value={note} onChange={e => ecrire(e.target.value)} placeholder="Vos notes…" aria-label="Vos notes" />
+      <p className="bloc-note">Vos notes restent sur cet appareil : elles ne sont ni enregistrées ni transmises.</p>
     </div>
   )
 }
@@ -217,12 +225,15 @@ function renderBloc(b) {
     case 'tip':       return <BlocTip key={b.id} c={c} />
     case 'principe':  return <BlocPrincipe key={b.id} c={c} />
     case 'erreur':    return <BlocErreur key={b.id} c={c} />
-    case 'reflexion': return <BlocReflexion key={b.id} c={c} />
+    case 'reflexion': return <BlocReflexion key={b.id} b={b} c={c} />
     case 'image':     return <BlocImage key={b.id} c={c} />
     case 'retenir':     return <BlocRetenir key={b.id} c={c} />
     case 'citation':    return <BlocCitation key={b.id} c={c} />
     case 'comparaison': return <BlocComparaison key={b.id} c={c} />
     case 'essayer':     return <BlocEssayer key={b.id} c={c} />
+    case 'question':    return <BlocQuestion key={b.id} c={c} />
+    case 'situation':   return <BlocSituation key={b.id} c={c} />
+    case 'video':       return <BlocVideo key={b.id} c={c} />
     default: return null
   }
 }
@@ -237,4 +248,124 @@ export function Bloc({ b }) {
   )
 }
 
-export const TYPES_BLOCS = ['seq', 'tip', 'principe', 'erreur', 'reflexion', 'image', 'retenir', 'citation', 'comparaison', 'essayer']
+export const LIBELLES_BLOCS = {
+  seq: 'Séquence (titre, texte, points)',
+  principe: 'Principe',
+  tip: 'Astuce',
+  retenir: 'À retenir',
+  citation: 'Citation',
+  comparaison: 'Plutôt / À éviter',
+  erreur: 'Erreurs à éviter',
+  question: 'Question (correction immédiate)',
+  situation: 'Mise en situation',
+  reflexion: 'Question de réflexion',
+  essayer: 'À essayer',
+  image: 'Image',
+  video: 'Vidéo',
+}
+export const TYPES_BLOCS = Object.keys(LIBELLES_BLOCS)
+
+// Durée de lecture estimée d'une liste de blocs, en minutes.
+export function dureeEstimee(blocs) {
+  let mots = 0
+  const compter = v => {
+    if (typeof v === 'string') { if (!/^https?:/.test(v)) mots += v.split(/\s+/).filter(Boolean).length }
+    else if (Array.isArray(v)) v.forEach(compter)
+    else if (v && typeof v === 'object') Object.values(v).forEach(compter)
+  }
+  let actif = 0
+  blocs.forEach(b => {
+    compter(b.contenu)
+    if (b.type === 'question') actif += 0.75
+    if (b.type === 'situation') actif += 2.5
+    if (b.type === 'video') actif += 3
+  })
+  return Math.max(2, Math.round(mots / 180 + actif))
+}
+
+// ── Blocs interactifs ──
+
+function BlocQuestion({ c }) {
+  const options = (c.options || []).filter(o => o?.texte?.trim())
+  const multi = options.filter(o => o.juste).length > 1
+  const [choix, setChoix] = useState([])
+  const [valide, setValide] = useState(false)
+  const juste = valide && options.every((o, i) => !!o.juste === choix.includes(i))
+
+  function basculer(i) {
+    if (valide) return
+    setChoix(multi ? (choix.includes(i) ? choix.filter(x => x !== i) : [...choix, i]) : [i])
+  }
+
+  return (
+    <section className="bloc-question">
+      <p className="bloc-etiquette">Question{multi ? ' · plusieurs réponses possibles' : ''}</p>
+      <p className="bloc-enonce">{c.enonce}</p>
+      <div className="bloc-options">
+        {options.map((o, i) => {
+          const etat = !valide ? (choix.includes(i) ? 'choisi' : '') : o.juste ? 'juste' : choix.includes(i) ? 'faux' : ''
+          return (
+            <button key={i} type="button" className={`bloc-option ${etat}`} aria-pressed={choix.includes(i)} onClick={() => basculer(i)} disabled={valide}>
+              <span className="bloc-marque" aria-hidden="true">{valide ? (o.juste ? '✓' : choix.includes(i) ? '✗' : '') : ''}</span>
+              <span>{o.texte}</span>
+            </button>
+          )
+        })}
+      </div>
+      {!valide
+        ? <button type="button" className="btn-primary btn-petit" disabled={!choix.length} onClick={() => setValide(true)}>Valider ma réponse</button>
+        : <div className={`bloc-retour ${juste ? 'juste' : 'faux'}`}>
+            <strong>{juste ? 'Bonne réponse.' : multi ? 'Pas tout à fait : les bonnes réponses sont cochées en vert.' : 'Pas tout à fait : la bonne réponse est en vert.'}</strong>
+            {c.explication && <p>{c.explication}</p>}
+            <button type="button" className="btn-lien" onClick={() => { setChoix([]); setValide(false) }}>Réessayer</button>
+          </div>}
+    </section>
+  )
+}
+
+function BlocSituation({ c }) {
+  const [reponse, setReponse] = useState('')
+  const [revele, setRevele] = useState(false)
+  const repliques = (c.repliques || []).filter(r => r?.texte?.trim())
+  const points = (c.points || []).filter(p => p?.trim())
+  return (
+    <section className="bloc-situation">
+      <p className="bloc-etiquette">{c.label || 'Mise en situation'}</p>
+      {c.titre && <h3>{c.titre}</h3>}
+      {c.contexte && <p className="bloc-contexte">{c.contexte}</p>}
+      {repliques.map((r, i) => (
+        <div key={i} className="bloc-bulle">{r.qui && <strong>{r.qui}</strong>}<p>{r.texte}</p></div>
+      ))}
+      {c.consigne && <p className="bloc-consigne">{c.consigne}</p>}
+      <textarea className="bloc-saisie" rows={3} value={reponse} onChange={e => setReponse(e.target.value)} placeholder="Écrivez ce que vous diriez ou feriez…" aria-label="Votre réponse" />
+      <p className="bloc-note">Votre réponse reste sur cet appareil : elle n'est ni enregistrée ni transmise.</p>
+      {!revele
+        ? <button type="button" className="btn-secondary btn-petit" onClick={() => setRevele(true)}>Voir une réponse possible</button>
+        : <div className="bloc-modele">
+            {c.reponse_modele && <p><strong>Une réponse possible : </strong>{c.reponse_modele}</p>}
+            {points.length > 0 && <ul>{points.map((p, i) => <li key={i}>{p}</li>)}</ul>}
+          </div>}
+    </section>
+  )
+}
+
+function idYoutube(url) {
+  const m = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/)
+  return m ? m[1] : ''
+}
+
+function BlocVideo({ c }) {
+  if (!c.url) return null
+  const yt = idYoutube(c.url)
+  return (
+    <figure className="bloc-video">
+      {c.titre && <h3>{c.titre}</h3>}
+      <div className="bloc-video-cadre">
+        {yt
+          ? <iframe src={`https://www.youtube-nocookie.com/embed/${yt}`} title={c.titre || 'Vidéo'} allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
+          : <video controls preload="metadata" playsInline src={c.url} />}
+      </div>
+      {c.legende && <figcaption>{c.legende}</figcaption>}
+    </figure>
+  )
+}

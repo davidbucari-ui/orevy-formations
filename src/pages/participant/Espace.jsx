@@ -22,8 +22,23 @@ export default function Espace({ participant, onLogout, onRetourAdmin }) {
         q(supabase.from('acces_formations').select('*').eq('participant_id', participant.id)),
         q(supabase.from('formations').select('*').order('ordre', { ascending: true, nullsFirst: false }).order('titre')),
       ])
+      const ids = a.map(x => x.formation_id)
+      // Nombre de modules par formation (blocs, sinon séquences de slides), modules lus et quiz réussis.
+      const [blocs, slides, prog, res] = ids.length ? await Promise.all([
+        q(supabase.from('formation_blocs').select('formation_id, sequence_num').in('formation_id', ids)),
+        q(supabase.from('slides').select('formation_id, sequence_num').in('formation_id', ids)),
+        q(supabase.from('progression').select('formation_id, module_num').eq('participant_id', participant.id)),
+        q(supabase.from('resultats_quiz').select('formation_id, reussi, passe_le').eq('participant_id', participant.id).eq('reussi', true)),
+      ]) : [[], [], [], []]
+      const compter = (liste, fid) => new Set(liste.filter(x => x.formation_id === fid).map(x => x.sequence_num)).size
       setCatalogue(f)
-      setAcces(a.map(x => ({ ...x, formation: f.find(fo => fo.id === x.formation_id) })).filter(x => x.formation))
+      setAcces(a.map(x => ({
+        ...x,
+        formation: f.find(fo => fo.id === x.formation_id),
+        modules: compter(blocs, x.formation_id) || compter(slides, x.formation_id),
+        lus: prog.filter(p => p.formation_id === x.formation_id).length,
+        validee: res.find(r => r.formation_id === x.formation_id)?.passe_le,
+      })).filter(x => x.formation))
     } catch (err) { setErreur(messageErreur(err)) }
   }
 
@@ -32,7 +47,8 @@ export default function Espace({ participant, onLogout, onRetourAdmin }) {
       onClose={() => { setOuverte(null); charger() }} />
   }
 
-  const vues = acces?.filter(a => a.vu).length || 0
+  const validees = acces?.filter(a => a.validee).length || 0
+  const enCours = acces?.filter(a => !a.validee && (a.lus || a.vu)).length || 0
   const parCategorie = catalogue.reduce((acc, f) => {
     const c = f.categorie || 'Autres formations'
     ;(acc[c] ||= []).push(f)
@@ -48,7 +64,8 @@ export default function Espace({ participant, onLogout, onRetourAdmin }) {
       <main className="page">
         <h1 style={{ fontSize: 30, marginBottom: 4 }}>Bonjour {participant.nom?.split(' ')[0] || ''} 👋</h1>
         {acces && <p style={{ color: 'var(--ink-muted)', marginBottom: 24 }}>
-          {acces.length === 0 ? 'Aucune formation ne vous est encore ouverte.' : `${vues} formation${vues > 1 ? 's' : ''} commencée${vues > 1 ? 's' : ''} sur ${acces.length}`}
+          {acces.length === 0 ? 'Aucune formation ne vous est encore ouverte.'
+            : `${acces.length} formation${acces.length > 1 ? 's' : ''} · ${enCours} en cours · ${validees} validée${validees > 1 ? 's' : ''}`}
         </p>}
         {erreur && <div className="alerte alerte-erreur">{erreur}</div>}
 
@@ -59,8 +76,10 @@ export default function Espace({ participant, onLogout, onRetourAdmin }) {
             ? <Vide>Vos formations apparaîtront ici dès que votre formateur vous y aura inscrit.</Vide>
             : <div className="grille">
                 {acces.map(a => (
-                  <CarteFormation key={a.id} f={a.formation} onClick={() => setOuverte(a)}
-                    badge={a.vu ? <span className="badge badge-seen">✓ Commencée</span> : <span className="badge badge-new">Nouveau</span>} />
+                  <CarteFormation key={a.id} f={a.formation} onClick={() => setOuverte(a)} progression={a}
+                    badge={a.validee ? <span className="badge badge-seen">✓ Validée</span>
+                      : (a.lus || a.vu) ? <span className="badge badge-pending">En cours</span>
+                      : <span className="badge badge-new">Nouveau</span>} />
                 ))}
               </div>
         ) : (
@@ -86,7 +105,7 @@ export default function Espace({ participant, onLogout, onRetourAdmin }) {
   )
 }
 
-function CarteFormation({ f, badge, onClick }) {
+function CarteFormation({ f, badge, onClick, progression }) {
   return (
     <div className={`card carte ${onClick ? 'cliquable' : ''}`} onClick={onClick}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -99,6 +118,12 @@ function CarteFormation({ f, badge, onClick }) {
         {f.date_session && <span>📅 {formatDate(f.date_session)}</span>}
         {f.duree_minutes && <span>⏱ {formatDuree(f.duree_minutes)}</span>}
       </p>
+      {progression?.modules > 0 && (
+        <div className="carte-progression">
+          <div className="jauge"><div style={{ width: `${Math.round(Math.min(progression.lus, progression.modules) / progression.modules * 100)}%` }} /></div>
+          <span>{progression.validee ? `Validée le ${formatDate(progression.validee, 'short')}` : `${Math.min(progression.lus, progression.modules)}/${progression.modules} modules`}</span>
+        </div>
+      )}
     </div>
   )
 }
