@@ -1,74 +1,82 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 
-const BASE = 'https://orevy-proxy.david-bucari.workers.dev/supabase/formations/rest/v1'
-
-export default function Login({ onLogin }) {
+/* Connexion sans mot de passe : Supabase envoie par email un code à usage
+   unique (et un lien de connexion, selon le modèle d'email configuré). */
+export default function Login() {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
+  const [etape, setEtape] = useState('email')   // 'email' | 'code'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleSubmit(e) {
+  async function envoyerCode(e) {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-    const emailClean = email.trim().toLowerCase()
-    const codeClean = code.trim().toUpperCase()
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL },
+    })
+    setLoading(false)
+    if (error) setError(error.status === 429
+      ? 'Trop de demandes. Patientez quelques minutes avant de redemander un code.'
+      : "Impossible d'envoyer le code : " + error.message)
+    else setEtape('code')
+  }
 
-    /* Le droit d'administration est porte par la fiche participant
-       (colonne is_admin), plus par un code ecrit dans le code source :
-       tout ce qui est compile dans le bundle est lisible publiquement.
-       Un seul chemin de connexion pour tout le monde. */
-       try {   
-         const r = await fetch(`${BASE}/participants?email=eq.${encodeURIComponent(emailClean)}&code_acces=eq.${encodeURIComponent(codeClean)}`) 
-         const data = await r.json()
-
-         if (!r.ok || !data || data.length === 0) {     
-        setError("Email ou code d'accès incorrect.")
-        return
-      }
-
-      const participant = { ...data[0], isAdmin: data[0].is_admin === true }
-
-      localStorage.setItem('orevy_participant', JSON.stringify(participant))
-      onLogin(participant)
-    } catch (err) {
-      console.error('Login:', err)
-      setError("Connexion au serveur impossible. Réessayez dans un instant.")
-    } finally {
-      setLoading(false)
-    }
+  async function verifierCode(e) {
+    e.preventDefault()
+    setLoading(true); setError('')
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' })
+    setLoading(false)
+    if (error) setError('Code incorrect ou expiré.')
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--cream)' }}>
-      <div style={{ width: '100%', maxWidth: '420px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }} className="fade-up">
-          <div style={{ width: 52, height: 52, background: 'var(--accent)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '22px' }}>🎓</div>
-          <h1 style={{ fontSize: '28px', color: 'var(--ink)', marginBottom: '6px' }}>Orevy</h1>
-          <p style={{ color: 'var(--ink-muted)', fontSize: '15px' }}>Accédez à vos formations</p>
+    <div className="plein-centre" style={{ padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }} className="fade-up">
+          <div className="logo">🎓</div>
+          <h1 style={{ fontSize: 28, marginBottom: 6 }}>Orevy</h1>
+          <p style={{ color: 'var(--ink-muted)', fontSize: 15 }}>Accédez à vos formations</p>
         </div>
-        <div className="card fade-up" style={{ padding: '32px', animationDelay: '0.08s' }}>
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label>Adresse email</label>
-              <input type="email" placeholder="vous@exemple.fr" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
-            </div>
-            <div className="field">
-              <label>Code d'accès</label>
-              <input type="text" placeholder="OREVY-XXXXXX" value={code} onChange={e => setCode(e.target.value)} required style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-              <p style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '6px' }}>Communiqué par email après votre session</p>
-            </div>
-            {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '14px', color: '#991B1B', marginBottom: '16px' }}>{error}</div>}
-            <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>{loading ? 'Connexion…' : 'Accéder à mes formations →'}</button>
-          </form>
-          <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #EAE4DA' }}>
-            <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ fontSize: '14px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-              Découvrir Orevy Solutions →
-            </a>
-          </div>
+        <div className="card fade-up" style={{ padding: 32 }}>
+          {etape === 'email' ? (
+            <form onSubmit={envoyerCode}>
+              <div className="field">
+                <label>Adresse email</label>
+                <input type="email" placeholder="vous@exemple.fr" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                <p className="aide">Un code de connexion vous sera envoyé par email.</p>
+              </div>
+              {error && <div className="alerte alerte-erreur">{error}</div>}
+              <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Envoi…' : 'Recevoir mon code'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={verifierCode}>
+              <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 16 }}>
+                Un email a été envoyé à <strong>{email}</strong>. Saisissez le code reçu, ou cliquez sur le lien de l'email.
+              </p>
+              <div className="field">
+                <label>Code de connexion</label>
+                <input type="text" inputMode="numeric" autoComplete="one-time-code" placeholder="123456"
+                  value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} required autoFocus
+                  style={{ letterSpacing: '0.3em', fontSize: 20, textAlign: 'center' }} />
+              </div>
+              {error && <div className="alerte alerte-erreur">{error}</div>}
+              <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={loading}>
+                {loading ? 'Vérification…' : 'Se connecter'}
+              </button>
+              <button type="button" className="btn-lien" onClick={() => { setEtape('email'); setCode(''); setError('') }}>
+                ← Changer d'adresse ou renvoyer un code
+              </button>
+            </form>
+          )}
         </div>
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--ink-muted)', marginTop: '24px' }}>Vous n'avez pas reçu votre code ?<br />Contactez votre formateur.</p>
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+          <a href="https://davidbucari-ui.github.io/orevy-solutions/" style={{ color: 'var(--ink-muted)' }}>Découvrir Orevy Solutions →</a>
+        </p>
       </div>
     </div>
   )
