@@ -5,8 +5,12 @@ import { Vide } from '../../components/ui'
 export default function Formations({ formations, acces, recharger, setMessage, onEditer }) {
   async function supprimer(f) {
     const n = acces.filter(a => a.formation_id === f.id).length
-    if (!confirm(`Supprimer « ${f.titre} »${n ? ` et ses ${n} accès participant` : ''} ? Cette action est définitive.`)) return
+    if (!confirm(`Supprimer « ${f.titre} »${n ? ` et ses ${n} accès participant` : ''}, avec tout son contenu (slides, quiz, séquences…) ? Cette action est définitive.`)) return
     try {
+      // La base n'efface pas en cascade : on retire d'abord tout ce qui dépend de la formation.
+      for (const t of ['acces_formations', 'chapitres', 'ressources', 'slides', 'formation_quiz', 'formation_blocs']) {
+        await q(supabase.from(t).delete().eq('formation_id', f.id))
+      }
       await q(supabase.from('formations').delete().eq('id', f.id))
       setMessage({ texte: 'Formation supprimée.' }); recharger()
     } catch (err) { setMessage({ erreur: true, texte: messageErreur(err) }) }

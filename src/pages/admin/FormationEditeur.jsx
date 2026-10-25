@@ -13,7 +13,10 @@ const CHAMPS_FORMATION = [
   { nom: 'duree_minutes', libelle: 'Durée (minutes)', type: 'number', placeholder: '90' },
   { nom: 'lien_video', libelle: 'Lien vidéo de la session', large: true, placeholder: 'https://…', aide: 'Facultatif : enregistrement Teams, YouTube…' },
   { nom: 'ordre', libelle: 'Ordre dans le catalogue', type: 'number', aide: 'Les plus petits nombres apparaissent en premier.' },
+  { nom: 'slug', libelle: 'Identifiant (slug)', placeholder: 'accueil-jeune-enfant', aide: 'Unique. Laissé vide, il est déduit du titre.' },
 ]
+
+const versSlug = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 const suivant = (lignes, col) => Math.max(0, ...lignes.map(l => l[col] || 0)) + 1
 
@@ -116,13 +119,17 @@ function Infos({ formation, onSaved }) {
       const v = form[c.nom]
       corps[c.nom] = v === '' ? null : c.type === 'number' ? Number(v) : v
     })
+    corps.slug = versSlug(corps.slug || corps.titre)
     try {
       const ligne = formation.id
         ? await q(supabase.from('formations').update(corps).eq('id', formation.id).select().single())
         : await q(supabase.from('formations').insert(corps).select().single())
       setMessage({ texte: formation.id ? 'Formation enregistrée.' : 'Formation créée : vous pouvez maintenant ajouter son contenu avec les onglets ci-dessus.' })
       onSaved(ligne)
-    } catch (err) { setMessage({ erreur: true, texte: messageErreur(err) }) }
+      setForm(f => ({ ...f, slug: ligne.slug }))
+    } catch (err) {
+      setMessage({ erreur: true, texte: err.code === '23505' ? `L'identifiant « ${corps.slug} » est déjà pris : choisissez-en un autre.` : messageErreur(err) })
+    }
     setSaving(false)
   }
 
