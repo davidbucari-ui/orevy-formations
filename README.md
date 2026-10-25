@@ -57,4 +57,4 @@ src/
 supabase/001_auth_rls.sql    règles d'accès de la base
 ```
 
-Les tables `formation_blocs` (anciens blocs e-learning narrés) et la colonne `participants.code_acces` sont conservées en base mais ne sont plus utilisées par l'appli.
+La colonne `participants.code_acces` est conservée en base mais n'est plus utilisée par l'appli.

@@ -121,3 +121,6 @@ create policy contenu_ouvert on public.slides
 
 create policy contenu_ouvert on public.formation_quiz
   for select to authenticated using (public.a_acces(formation_id));
+
+create policy contenu_ouvert on public.formation_blocs
+  for select to authenticated using (public.a_acces(formation_id));

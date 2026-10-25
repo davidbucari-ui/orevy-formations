@@ -4,11 +4,12 @@ import { formatDate, formatDuree, messageErreur } from '../../lib/format'
 import { Entete, Vide } from '../../components/ui'
 import LecteurSlides from '../../components/LecteurSlides'
 import Quiz from '../../components/Quiz'
+import LecteurBlocs from '../../components/LecteurBlocs'
 
 export default function FormationVue({ acces, participant, onClose }) {
   const f = acces.formation
   const [contenu, setContenu] = useState(null)
-  const [mode, setMode] = useState('accueil')   // 'accueil' | 'slides' | 'quiz'
+  const [mode, setMode] = useState('accueil')   // 'accueil' | 'slides' | 'blocs' | 'quiz'
   const [erreur, setErreur] = useState('')
 
   useEffect(() => {
@@ -18,8 +19,9 @@ export default function FormationVue({ acces, participant, onClose }) {
       q(supabase.from('ressources').select('*').eq('formation_id', f.id).order('created_at')),
       q(supabase.from('slides').select('*').eq('formation_id', f.id).order('sequence_num').order('ordre')),
       q(supabase.from('formation_quiz').select('*').eq('formation_id', f.id).order('module_num').order('ordre')),
+      q(supabase.from('formation_blocs').select('*').eq('formation_id', f.id).order('sequence_num').order('ordre')),
     ])
-      .then(([chapitres, ressources, slides, quiz]) => setContenu({ chapitres, ressources, slides, quiz }))
+      .then(([chapitres, ressources, slides, quiz, blocs]) => setContenu({ chapitres, ressources, slides, quiz, blocs }))
       .catch(err => setErreur(messageErreur(err)))
   }, [f.id])
 
@@ -27,11 +29,13 @@ export default function FormationVue({ acces, participant, onClose }) {
 
   return (
     <div>
-      <Entete titre={f.titre} onRetour={mode === 'quiz' ? () => setMode('accueil') : onClose} />
+      <Entete titre={f.titre} onRetour={mode === 'accueil' ? onClose : () => setMode('accueil')} />
       <main className="page page-etroite">
         {erreur && <div className="alerte alerte-erreur">{erreur}</div>}
         {!contenu ? <Vide>Chargement…</Vide> : mode === 'quiz' ? (
           <Quiz questions={contenu.quiz} formation={f} participant={participant} onFinish={() => setMode('accueil')} />
+        ) : mode === 'blocs' ? (
+          <LecteurBlocs formation={f} blocs={contenu.blocs} aQuiz={contenu.quiz.length > 0} onQuiz={() => { setMode('quiz'); window.scrollTo(0, 0) }} />
         ) : (
           <>
             <h1 style={{ fontSize: 28, marginBottom: 8 }}>{f.titre}</h1>
@@ -44,6 +48,14 @@ export default function FormationVue({ acces, participant, onClose }) {
             {f.description && <p style={{ color: 'var(--ink-soft)', marginBottom: 28, lineHeight: 1.7 }}>{f.description}</p>}
 
             <div className="pile">
+              {contenu.blocs.length > 0 && (() => {
+                const n = new Set(contenu.blocs.map(b => b.sequence_num)).size
+                return (
+                  <Bloc titre="📖 Parcours e-learning" texte={`${n} module${n > 1 ? 's' : ''} à suivre à votre rythme, avec narration audio sur certains passages.`}>
+                    <button className="btn-primary" onClick={() => { setMode('blocs'); window.scrollTo(0, 0) }}>Commencer le parcours →</button>
+                  </Bloc>
+                )
+              })()}
               {contenu.slides.length > 0 && (
                 <Bloc titre="📖 Support de formation" texte={`${contenu.slides.length} diapositive${contenu.slides.length > 1 ? 's' : ''}`}>
                   <button className="btn-primary" onClick={() => setMode('slides')}>Ouvrir le support →</button>
@@ -75,7 +87,7 @@ export default function FormationVue({ acces, participant, onClose }) {
                   <button className="btn-primary" onClick={() => setMode('quiz')}>Commencer le quiz →</button>
                 </Bloc>
               )}
-              {!f.lien_video && !contenu.slides.length && !contenu.chapitres.length && !contenu.ressources.length && !contenu.quiz.length &&
+              {!f.lien_video && !contenu.blocs.length && !contenu.slides.length && !contenu.chapitres.length && !contenu.ressources.length && !contenu.quiz.length &&
                 <Vide>Le contenu de cette formation sera bientôt disponible.</Vide>}
             </div>
           </>
