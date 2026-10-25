@@ -28,8 +28,10 @@ export default function Login({ onLogin }) {
         return
       }
 
-      localStorage.setItem('orevy_participant', JSON.stringify(data[0]))
-      onLogin(data[0])
+      const participant = { ...data[0], isAdmin: data[0].is_admin === true }
+
+      localStorage.setItem('orevy_participant', JSON.stringify(participant))
+      onLogin(participant)
     } catch (err) {
       console.error('Login:', err)
       setError("Connexion au serveur impossible. Réessayez dans un instant.")
