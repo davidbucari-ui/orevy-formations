@@ -3,6 +3,7 @@ import { supabase, q } from '../../lib/supabase'
 import { messageErreur } from '../../lib/format'
 import { Alerte, Vide } from '../../components/ui'
 import { Bloc, lienJeu } from '../../components/Blocs'
+import QrCode from '../../components/QrCode'
 
 const NIVEAUX = [['', 'Au choix du joueur'], ['fam', 'Familles (tout public)'], ['pro', 'Professionnels'], ['mix', 'Mixte']]
 const MODES = [['', 'Au choix du joueur'], ['coop', 'Coopératif'], ['comp', 'Compétitif']]
@@ -91,7 +92,18 @@ export default function OngletJeu({ formation }) {
             </select>
           </div>
         </div>
-        <a className="btn-primary" href={lienJeu(reglages)} target="_blank" rel="noopener noreferrer">Ouvrir le jeu →</a>
+        <div className="jeu-lancer">
+          <div>
+            <a className="btn-primary" href={lienJeu(reglages)} target="_blank" rel="noopener noreferrer">Ouvrir le jeu →</a>
+            <p className="aide" style={{ maxWidth: 360 }}>
+              Ou faites scanner ce QR code : il ouvre le jeu sur le téléphone avec ces réglages.
+              Téléchargez-le pour le mettre sur une diapo ou l'imprimer. Pour une partie à plusieurs
+              téléphones, utilisez plutôt « Créer une partie en ligne » dans le jeu : il affiche son propre QR code.
+            </p>
+          </div>
+          <QrCode texte={new URL(lienJeu(reglages), window.location.origin).href} taille={168}
+            nomFichier={`cube-a-cube${reglages.niveau ? '-' + reglages.niveau : ''}${reglages.mode ? '-' + reglages.mode : ''}`} />
+        </div>
       </section>
 
       <section className="card formulaire">
