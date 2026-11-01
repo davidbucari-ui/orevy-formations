@@ -234,6 +234,7 @@ function renderBloc(b) {
     case 'question':    return <BlocQuestion key={b.id} c={c} />
     case 'situation':   return <BlocSituation key={b.id} c={c} />
     case 'video':       return <BlocVideo key={b.id} c={c} />
+    case 'jeu':         return <BlocJeu key={b.id} c={c} />
     default: return null
   }
 }
@@ -262,6 +263,7 @@ export const LIBELLES_BLOCS = {
   essayer: 'À essayer',
   image: 'Image',
   video: 'Vidéo',
+  jeu: 'Jeu Cube à cube',
 }
 export const TYPES_BLOCS = Object.keys(LIBELLES_BLOCS)
 
@@ -279,6 +281,7 @@ export function dureeEstimee(blocs) {
     if (b.type === 'question') actif += 0.75
     if (b.type === 'situation') actif += 2.5
     if (b.type === 'video') actif += 3
+    if (b.type === 'jeu') actif += 10
   })
   return Math.max(2, Math.round(mots / 180 + actif))
 }
@@ -367,5 +370,22 @@ function BlocVideo({ c }) {
       </div>
       {c.legende && <figcaption>{c.legende}</figcaption>}
     </figure>
+  )
+}
+
+// Lien vers le jeu Cube à cube (public/jeu/cube-a-cube.html, copié dans docs/ au build).
+function BlocJeu({ c }) {
+  const params = new URLSearchParams()
+  if (c.niveau) params.set('niveau', c.niveau)
+  if (c.mode) params.set('mode', c.mode)
+  const href = `${import.meta.env.BASE_URL}jeu/cube-a-cube.html${params.toString() ? `?${params}` : ''}`
+  return (
+    <section className="bloc-situation">
+      <p className="bloc-etiquette">{c.label || 'Pour jouer ensemble'}</p>
+      <h3>{c.titre || 'Cube à cube'}</h3>
+      <p className="bloc-contexte">{c.consigne || 'Un jeu de plateau sur la petite enfance, à jouer seul ou en équipe : chaque bonne réponse ajoute un cube à votre pyramide.'}</p>
+      <a className="btn-primary" href={href} target="_blank" rel="noopener noreferrer">Ouvrir le jeu →</a>
+      <p className="bloc-note">Le jeu s'ouvre dans un nouvel onglet. Les parties ne sont pas enregistrées.</p>
+    </section>
   )
 }

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cube à cube – le jeu de la petite enfance</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FBF8F3;--card:#fff;--ink:#2C2A33;--mut:#6B6876;--line:#E6E1D8;--soft:#F3EEE6;--ok:#1F6B4A;--okbg:#E3F4EA;--ko:#A3341F;--kobg:#FBE6E1;--acc:#534AB7;--accbg:#EEEDFE}
+@media (prefers-color-scheme:dark){:root{--bg:#1D1B22;--card:#2A2731;--ink:#F2EFF6;--mut:#A9A5B4;--line:#3E3A47;--soft:#34303C;--ok:#7CD3A6;--okbg:#1F3A2D;--ko:#F0907F;--kobg:#472420;--acc:#AFA9EC;--accbg:#3A3560}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-size:16px;line-height:1.45}
+main{max-width:480px;margin:0 auto;padding:14px 14px 40px}
+h1{font-size:26px;font-weight:800;margin:0}
+h2{font-size:18px;font-weight:800;margin:0 0 8px}
+p{margin:0 0 8px}
+.mut{color:var(--mut);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:12px}
+button{font:inherit;font-weight:600;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:11px 14px;cursor:pointer;min-height:44px}
+button:active{transform:scale(.98)}
+button.main{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:800;width:100%}
+@media (prefers-color-scheme:dark){button.main{color:#1D1B22}}
+button.ghost{background:transparent}
+.row{display:flex;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;width:100%;margin-top:8px;font-weight:600}
+.opt .l{flex:none;width:28px;height:28px;border-radius:9px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.opt.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.opt.ko{background:var(--kobg);border-color:var(--ko);color:var(--ko)}
+.sel{border:2px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;background:var(--card);text-align:left;width:100%;font-weight:600}
+.sel.on{border-color:var(--acc);background:var(--accbg)}
+.sel small{display:block;font-weight:400;color:var(--mut);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px}
+input[type=text]{font:inherit;width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-height:44px}
+.team{border:2px solid var(--line);border-radius:14px;padding:8px 10px;display:flex;align-items:center;gap:8px;background:var(--card)}
+.team.cur{border-color:var(--acc)}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--ko)}
+.dot.on{background:var(--ko)}
+.note{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--mut);margin-top:10px}
+summary{cursor:pointer;font-weight:800}
+.chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.chip{border:none;font-weight:800;font-size:13px;border-radius:12px;padding:10px 8px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script>
+var CATS=[
+{n:"Grandir",f:"#AFA9EC",s:"#534AB7",t:"#26215C"},
+{n:"Prendre soin",f:"#F0997B",s:"#993C1D",t:"#4A1B0C"},
+{n:"Manger et dormir",f:"#EF9F27",s:"#854F0B",t:"#412402"},
+{n:"Jouer et éveiller",f:"#5DCAA5",s:"#0F6E56",t:"#04342C"},
+{n:"Le métier",f:"#85B7EB",s:"#185FA5",t:"#042C53"},
+{n:"Famille et culture",f:"#ED93B1",s:"#993556",t:"#4B1528"}];
+var TEAMCOL=["#534AB7","#D85A30","#0F6E56","#185FA5"];
+/* [catégorie, niveau F=tout public P=pro, question, [bonne réponse, faux, faux], à retenir, clé de source] */
+var SRC={
+FER:["Ferland, Le développement de l'enfant au quotidien, 2e éd. (CHU Sainte-Justine, 2014)"],
+FERAFPA:["Ferland (CHU Sainte-Justine, 2014) et sante.fr (mpedia, AFPA), enfant de 3 à 4 ans","https://www.sante.fr/node/1093914"],
+PIKLER:["Association Pikler Lóczy France (entretien avec C. Peyrot, 2019)"],
+PS2021:["Recommandations de premiers secours 2021 (obstruction des voies aériennes)"],
+PSBRUL:["Recommandations de premiers secours 2021 (brûlure thermique)"],
+REF:["Référentiel national de qualité d'accueil du jeune enfant (ministère, 2025)","https://solidarites.gouv.fr/tout-savoir-sur-le-referentiel-national-de-la-qualite-daccueil-du-jeune-enfant"],
+CHARTE:["Charte nationale pour l'accueil du jeune enfant (arrêté du 23 septembre 2021)","https://solidarites.gouv.fr/charte-nationale-pour-laccueil-du-jeune-enfant"],
+HASMIN:["HAS, fiche mémo sur la mort inattendue du nourrisson","https://www.has-sante.fr/jcms/p_3151574/fr/prevention-des-deformations-craniennes-positionnelles-dcp-et-mort-inattendue-du-nourrisson"],
+HASSBS:["HAS, syndrome du bébé secoué (mise au point, 2019)","https://www.has-sante.fr/jcms/p_3136556/fr/la-has-reaffirme-l-importance-de-sa-recommandation-sur-le-diagnostic-de-syndrome-du-bebe-secoue"],
+SPURG:["Service-public.fr, numéros d'urgence","https://www.service-public.gouv.fr/particuliers/actualites/A17758?lang=fr"],
+SP119:["Service-public.fr, enfant en danger : le 119","https://www.service-public.gouv.fr/particuliers/vosdroits/F781?lang=fr"],
+DGS:["Direction générale de la Santé, 11 vaccinations obligatoires (2018)","https://www.grand-est.ars.sante.fr/media/25407/download"],
+EMC:["EMC, « Fièvre de l'enfant » (Elsevier, 2018)","https://www.em-consulte.com/es/article/1194196/auto_evaluation/fievre-de-l-enfant"],
+SPFDIV:["Santé publique France, diversification alimentaire des moins de 3 ans (2021)","https://santepubliquefrance.fr/content/download/498983/3737723?version=1"],
+SPFREV:["Santé publique France, repères relayés par La Revue du Praticien","https://www.larevuedupraticien.fr/article/diversification-alimentaire-tout-ou-presque-des-4-mois"],
+ANSES:["ANSES, préparer et conserver le biberon","https://www.saint-pierre-et-miquelon.developpement-durable.gouv.fr/IMG/pdf/ANSES-Ft-AlimNourrissons.pdf"],
+MPSLEEP:["sante.fr (mpedia, AFPA), rythme de sommeil de bébé","https://www.sante.fr/node/1093862"],
+MPNEO:["sante.fr (mpedia, AFPA), néophobie et sélectivité alimentaire","https://www.sante.fr/node/1093937"],
+ALLERG:["Réponse ministérielle, Assemblée nationale (règlement INCO 1169/2011)","https://questions.assemblee-nationale.fr/dyn/14/questions/QANR5L14QE98016.pdf"],
+DGCCRF:["DGCCRF, chaîne du froid (2020)","https://www.bas-rhin.gouv.fr/contenu/telechargement/44547/289143/file/chaine-du-froid.pdf"],
+ARRETE2009:["Arrêté du 21 décembre 2009, températures de conservation (préfecture du Calvados)","https://www.calvados.gouv.fr/index.php/contenu/telechargement/18316/140968/file/temperature_de_conservation_et_service_des_aliments.pdf"],
+OMS:["AFPA, rappel de la recommandation de l'OMS (2025)","https://afpa.org/content/uploads/2025/10/CP_AFPA_Semaine-Allaitement-Maternel_09-10-2025.pdf"],
+ECRANS:["Ministère des Solidarités, écrans et enfants","https://solidarites.gouv.fr/enfants-et-ecrans-des-risques-sanitaires-reels-un-accompagnement-necessaire"],
+MICRO:["Arrêté d'ouverture d'une micro-crèche (Département du Jura)","https://www.jura.fr/wp-content/uploads/sites/23/2022/09/ARR_2022_0895_OUVERTURE-MICRO-CRECHE-MORBIER.pdf"],
+NORMA1:["Ministère des Solidarités, FAQ modes d'accueil n°1 (2021)","https://solidarites.gouv.fr/sites/solidarite/files/2024-08/FAQ-Norma-1-modes-accueil-du-jeune-enfant-dec-2021.pdf"],
+NORMA3:["Ministère des Solidarités, FAQ modes d'accueil n°3 (2023)","https://solidarites.gouv.fr/sites/solidarite/files/2024-08/FAQ-Norma-3-modes-accueil-du-jeune-enfant-avril-2023.pdf"],
+ASSMAT:["Ministère des Solidarités, capacité d'accueil des assistants maternels (2025)","https://solidarites.gouv.fr/sites/solidarite/files/2025-07/Tableau-recapitualtif-capacite-accueil-assistants-maternels.pdf"],
+DECRET:["Décret n° 2021-1131 du 30 août 2021 (Légifrance)","https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000043990642"],
+RSAI:["Décret 2021-1131, présentation de la PMI du Puy-de-Dôme (Caf)","https://www.caf.fr/sites/default/files/medias/631/Partenaires/PDF%20_Part/RPE/pr%C3%A9sentation%20d%C3%A9cret%202021%20Eaje.pdf"],
+EJE:["ONISEP, diplôme d'État d'éducateur de jeunes enfants","https://www.onisep.fr/Ressources/univers-formation/Formations/Post-bac/diplome-d-etat-d-educateur-de-jeunes-enfants"],
+DEAP:["ONISEP, diplôme d'État d'auxiliaire de puériculture","https://www.onisep.fr/ressources/univers-formation/formations/Lycees/diplome-d-etat-d-auxiliaire-de-puericulture"],
+AEPE:["Ministère des Solidarités, CAP AEPE","https://solidarites.gouv.fr/accompagnant-educatif-petite-enfance-aepe"],
+INSTR:["Ministère de l'Éducation nationale, loi pour une école de la confiance","https://www.education.gouv.fr/la-loi-pour-une-ecole-de-la-confiance-454371"],
+DOLTO:["BnF, bibliographie Françoise Dolto (2022)","https://www.bnf.fr/sites/default/files/2022-03/biblio_dolto.pdf"],
+WAIMH:["A. Tardos, directrice de l'Institut Pikler (WAIMH, 2010)","https://perspectives.waimh.org/perspectives-archive/signal3-4_2010/"],
+J1000:["Ministère des Solidarités, les 1000 premiers jours","https://solidarites.gouv.fr/la-politique-publique-des-1000-premiers-jours-de-lenfant"],
+LOI2019:["Loi n° 2019-721 du 10 juillet 2019 (Journal officiel)","https://www.lemediasocial.fr/hulkStatic/EL/ELI/2019/07/fa36dcac3-80d6-4e29-955e-19cc2ec48241/sharp_/ANX/Lviolencesordinaires.pdf"],
+LAEP:["Caf, lieux d'accueil enfants-parents","https://www.caf.fr/sites/default/files/medias/851/partenaires/ENFANCE%20JEUNESSE/Dplt-LAEP-pro%20version%20nov%2023.pdf"]
+};
+var Q=[
+/* ---- Grandir ---- */
+[0,"F","Vers quel âge un bébé assis se protège-t-il des chutes vers l'avant ?",["Vers 6-7 mois","Dès 2 mois","Vers 12 mois"],"Il apprend ensuite à se protéger de côté (8-9 mois), puis vers l'arrière (10 mois). Les âges varient d'un enfant à l'autre.","FER"],
+[0,"F","Vers quel âge apparaît le sourire social ?",["Vers 6 semaines","À la naissance","Vers 6 mois"],"Vers 6 semaines, bébé sourit à une personne : c'est le début de l'échange social.","FER"],
+[0,"F","Que traduit souvent le « non » d'un enfant de 2 à 3 ans ?",["Il veut faire seul et s'affirmer","Un défaut d'éducation","Un trouble du comportement"],"Entre 2 et 3 ans, l'enfant s'oppose parfois, veut faire certaines choses seul et apprend peu à peu à dire son désaccord avec des mots.","FER"],
+[0,"F","Entre quels âges l'enfant se met-il à babiller (« bababa », « mamama ») ?",["Entre 6 et 12 mois","Dès la naissance","Vers 18 mois"],"Avant, il gazouille (« aaa… iii… »). Les premiers mots arrivent entre 1 et 2 ans.","FER"],
+[0,"F","Entre quels âges un enfant fait-il ses premiers pas sans aide ?",["Entre 1 et 2 ans","Vers 6 mois","Vers 3 ans"],"Entre 6 et 12 mois, il se déplace en se tenant aux meubles et fait quelques pas s'il est tenu par la main.","FER"],
+[0,"P","Quel psychiatre est associé à la théorie de l'attachement ?",["John Bowlby","Jean Piaget","Célestin Freinet"],"Pour Bowlby, le lien à une figure d'attachement sécurise l'enfant et lui permet d'explorer.",null],
+[0,"P","Quel psychologue a décrit la permanence de l'objet ?",["Jean Piaget","Donald Winnicott","Henri Wallon"],"Dès 6-12 mois, l'enfant cherche le jouet qu'il a fait tomber. Le concept est acquis entre 1 et 2 ans.","FER"],
+[0,"P","Comment Winnicott nomme-t-il le doudou ?",["Un objet transitionnel","Un objet permanent","Un objet d'imitation"],"Il aide l'enfant à supporter l'absence de ses parents.",null],
+[0,"P","Que désigne la « motricité libre » dans l'approche d'Emmi Pikler ?",["Bouger à son rythme, sans positions imposées","Laisser l'enfant sans surveillance","Le stimuler par des exercices quotidiens"],"Pour Pikler, la meilleure stimulation est l'environnement humain et matériel : l'adulte est présent et attentif, mais il n'impose pas de postures.","PIKLER"],
+[0,"P","Entre 6 et 12 mois, l'enfant pointe un objet du doigt. À quoi cela lui sert-il ?",["À se faire comprendre sans les mots","À compter les objets","À repousser l'adulte"],"Il utilise aussi d'autres gestes, comme tendre les bras, avant ses premiers mots.","FER"],
+[0,"F","Vers 18 mois, combien de mots un enfant dit-il environ ?",["Environ 50","Environ 5","Environ 500"],"Vers 2 ans, il en comprend environ 200 et en dit une centaine. Vers 3 ans, il en dit environ 500.","FER"],
+[0,"F","À partir de quel âge un enfant fait-il des phrases de deux mots (« Bébé tombé ») ?",["Entre 2 et 3 ans","Vers 6 mois","Vers 4 ans"],"Viennent ensuite les phrases de trois mots (« Je veux pomme »).","FER"],
+[0,"F","Entre 1 et 2 ans, quelle étape marque la découverte de soi ?",["Il se reconnaît dans le miroir et sur les photos","Il lit ses premiers mots","Il compte jusqu'à 30"],"C'est aussi le moment où il commence à jouer à « faire semblant ».","FER"],
+[0,"F","À partir de quel âge un enfant monte-t-il et descend-il l'escalier en alternant les pieds, comme un adulte ?",["Entre 3 et 4 ans","Vers 1 an","Vers 18 mois"],"Entre 2 et 3 ans, certains enfants montent déjà en alternant les pieds en tenant la rampe, mais ils descendent encore une marche à la fois. L'alternance à la montée et à la descente s'installe entre 3 et 4 ans.","FERAFPA"],
+[0,"P","Entre 6 et 12 mois, un bébé pleure parfois quand il est séparé de ses parents. Que révèle cette réaction ?",["Il s'attache à une personne en particulier","Un caprice","Un retard de développement"],"À cet âge, il a parfois peur des étrangers et il décode les émotions des autres à l'expression de leur visage.","FER"],
+/* ---- Prendre soin ---- */
+[1,"F","Dans quelle position coucher un nourrisson pour dormir ?",["Sur le dos","Sur le ventre","Sur le côté"],"À plat sur le dos, sur un matelas ferme, pour les siestes comme pour la nuit. La position ventrale est le principal facteur de risque de mort inattendue du nourrisson.","HASMIN"],
+[1,"F","Quel objet est déconseillé dans le lit d'un nourrisson ?",["Un tour de lit","Une gigoteuse (turbulette)","Un matelas ferme"],"Pas de tour de lit, d'oreiller, de couette ni de cale-bébé : un matelas ferme et une gigoteuse adaptée à sa taille.","HASMIN"],
+[1,"F","Quel numéro appeler pour joindre le SAMU ?",["Le 15","Le 17","Le 18"],"Le 17 est la police ou la gendarmerie, le 18 les pompiers. Le 112 est le numéro d'urgence européen.","SPURG"],
+[1,"F","Combien de vaccins sont obligatoires pour les enfants nés depuis 2018 ?",["11","3","6"],"Ils sont exigés pour entrer en collectivité (crèche, assistant maternel) et s'effectuent entre 2 et 18 mois.","DGS"],
+[1,"F","Un nourrisson s'étouffe et ne respire plus : quel premier geste ?",["Quelques claques fermes dans le dos, entre les omoplates","Lui faire boire de l'eau","Le secouer"],"On donne jusqu'à 5 claques dans le dos, puis jusqu'à 5 compressions thoraciques, en alternance. Appelez le 15 ou le 112. Une formation aux premiers secours est conseillée.","PS2021"],
+[1,"F","Quelle température est recommandée dans la chambre d'un bébé ?",["Entre 18 et 20 °C","Entre 24 et 26 °C","Environ 15 °C"],"La chambre ne doit pas être surchauffée.","HASMIN"],
+[1,"F","Que peut provoquer le fait de secouer un nourrisson ?",["Des lésions cérébrales graves","Rien de grave","Un simple hoquet"],"Plus de 10 % des bébés secoués meurent et plus des trois quarts des survivants gardent des séquelles à vie. Cela survient le plus souvent avant 1 an, souvent par épuisement face aux pleurs.","HASSBS"],
+[1,"P","À partir de quelle température rectale parle-t-on de fièvre ?",["38 °C","37 °C","39 °C"],"La mesure rectale est la référence avant 2 ans.","EMC"],
+[1,"P","Que signifie PAI ?",["Projet d'accueil individualisé","Plan d'action immédiate","Protocole d'alimentation infantile"],"Il organise l'accueil d'un enfant avec une maladie chronique ou une allergie.",null],
+[1,"P","Quelle est la mesure n°1 contre la transmission des infections en collectivité ?",["L'hygiène des mains","Le port du masque","L'aération du soir"],"Lavage ou friction des mains entre chaque soin et chaque change.",null],
+[1,"P","Brûlure légère chez un enfant : que faire en premier ?",["Passer sous l'eau tempérée (15 à 25 °C) au moins 10 minutes","Appliquer du beurre","Percer les cloques"],"Le refroidissement le plus tôt possible, idéalement pendant 20 minutes, limite la profondeur de la brûlure.","PSBRUL"],
+[1,"F","Où le bébé dort-il pendant ses 6 premiers mois, selon la HAS ?",["Dans la chambre des parents, dans son propre lit","Dans le lit des parents","Dans une chambre séparée"],"Sans partage du lit parental et sans exposition au tabac.","HASMIN"],
+[1,"F","Quel numéro appeler pour signaler un enfant en danger, ou en cas de doute ?",["Le 119","Le 3919","Le 114"],"Appel gratuit et confidentiel, 24 h/24 et 7 j/7. On peut appeler même sans certitude.","SP119"],
+[1,"F","Entre quels âges les morsures sont-elles les plus fréquentes chez le jeune enfant ?",["Entre 18 et 30 mois","Avant 6 mois","Après 4 ans"],"Elles ne sont pas intentionnelles : le cerveau est encore immature. Le pic d'agressivité se situe entre 2 et 3 ans, puis diminue vers 4 ans. On reste calme, on rappelle la règle et on évite les réactions répressives.","REF"],
+[1,"P","Avant 2 ans, quelle prise de température est recommandée ?",["Rectale","Sur le front","Sous la langue"],"Entre 2 et 5 ans, les mesures tympanique ou axillaire sont acceptables pour un dépistage, à vérifier par voie rectale si la température est anormale. Chez le nouveau-né, on privilégie la voie axillaire.","EMC"],
+/* ---- Manger et dormir ---- */
+[2,"F","Entre quels âges commence la diversification alimentaire ?",["Entre 4 et 6 mois révolus","Avant 3 mois","Après 1 an"],"Pas avant 4 mois révolus, ni après 6 mois révolus. On introduit ensuite tous les groupes d'aliments.","SPFDIV"],
+[2,"F","Quel aliment est à éviter avant 1 an ?",["Le miel","La compote","Le riz"],"Santé publique France : pas de miel avant 1 an.","SPFDIV"],
+[2,"F","Quels aliments faut-il éviter crus ou peu cuits avant 3 ans ?",["Viande, poisson, coquillages et œufs","Les fruits mûrs","Le pain"],"Santé publique France recommande aussi d'éviter le lait cru et les fromages au lait cru avant 5 ans.","SPFDIV"],
+[2,"F","Combien un nouveau-né dort-il par jour en moyenne ?",["Environ 16 heures","Environ 8 heures","Environ 22 heures"],"Certains bébés dorment jusqu'à 20 heures. Le sommeil est fractionné et il y a peu de différence entre le jour et la nuit.","MPSLEEP"],
+[2,"F","Quel appareil ne faut-il jamais utiliser pour réchauffer un biberon ?",["Le four à micro-ondes","Le chauffe-biberon","Le bain-marie"],"On l'évite pour prévenir les brûlures. Une fois réchauffé, le biberon se donne dans la demi-heure.","ANSES"],
+[2,"P","Un biberon de lait infantile préparé reste à température ambiante : au bout de combien de temps le jette-t-on ?",["Une heure","Quatre heures","Vingt-quatre heures"],"Le lait doit être donné dans l'heure. Une fois réchauffé, il doit l'être dans la demi-heure.","ANSES"],
+[2,"P","Combien d'allergènes alimentaires doivent être signalés obligatoirement ?",["14","6","30"],"La liste est fixée à l'annexe II du règlement européen n° 1169/2011, dit « INCO ».","ALLERG"],
+[2,"P","Dans un réfrigérateur domestique, entre quelles températures se situe la zone la plus froide ?",["0 et +4 °C","+4 et +8 °C","+8 et +12 °C"],"Le maximum de conservation dépend de la denrée (arrêté du 21 décembre 2009) : +4 °C pour les denrées très périssables.","DGCCRF"],
+[2,"P","Comment s'appelle la méthode de maîtrise des dangers alimentaires en restauration collective ?",["HACCP","PAI","PMI"],"Hazard Analysis Critical Control Point : on repère les points critiques et on les contrôle.",null],
+[2,"F","Face au refus d'un aliment nouveau, que recommande-t-on ?",["Le reproposer régulièrement, sans forcer","Obliger l'enfant à goûter","Retirer le dessert"],"La néophobie concerne environ 77 % des enfants entre 2 et 10 ans. On ne pousse pas l'enfant à finir son assiette.","MPNEO"],
+[2,"F","À partir de quel âge peut-on donner du lait de vache entier UHT à un enfant ?",["À partir de 1 an","Dès 4 mois","À partir de 3 ans"],"Il peut alterner avec le lait de croissance.","SPFREV"],
+[2,"P","Jusqu'à quel âge évite-t-on le lait cru et les fromages au lait cru chez l'enfant ?",["Jusqu'à 5 ans","Jusqu'à 1 an","Jusqu'à 2 ans"],"C'est une précaution contre les risques infectieux. Viande, poisson, coquillages et œufs crus sont évités jusqu'à 3 ans.","SPFDIV"],
+[2,"F","Jusqu'à quel âge l'OMS recommande-t-elle l'allaitement maternel exclusif ?",["6 mois","2 mois","12 mois"],"Elle recommande ensuite de poursuivre l'allaitement jusqu'à 2 ans, avec une alimentation diversifiée.","OMS"],
+[2,"F","Vers quel âge disparaît la sieste du matin ?",["Entre 15 et 18 mois","Vers 6 mois","Vers 3 ans"],"La sieste du début d'après-midi dure encore jusqu'à 2 à 5 ans.","MPSLEEP"],
+[2,"P","Quelle température maximale pour conserver des viandes hachées en restauration collective ?",["+2 °C","+4 °C","+8 °C"],"Le maximum dépend de la denrée (arrêté du 21 décembre 2009). Les autres denrées périssables peuvent aller jusqu'à +8 °C.","ARRETE2009"],
+/* ---- Jouer et éveiller ---- */
+[3,"F","Que développe surtout le jeu de « coucou » avec un bébé de 8 mois ?",["L'idée qu'un objet existe même caché","La force des bras","Le vocabulaire"],"Entre 6 et 12 mois, il aime les jeux de « coucou » et commence à chercher le jouet qu'il a fait tomber.","FER"],
+[3,"F","Selon les recommandations officielles, pas d'écran avant l'âge de...",["3 ans","1 an","6 ans"],"Avant 3 ans, l'exposition aux écrans est proscrite, y compris en bruit de fond : l'enfant a besoin d'interactions directes. Cette consigne figure dans le carnet de santé depuis janvier 2025.","ECRANS"],
+[3,"F","Vers quel âge un enfant aime-t-il regarder les images d'un livre et en pointer quelques-unes ?",["Entre 1 et 2 ans","Vers 3 mois","Vers 5 ans"],"Sur demande, il identifie quelques images en les pointant.","FER"],
+[3,"F","Entre 1 et 2 ans, quel jeu apparaît ?",["Faire semblant (« comme si »)","Les jeux de règles","Les jeux de société"],"L'enfant commence à utiliser des symboles et il change la fonction des objets dans son jeu.","FER"],
+[3,"P","Qui est à l'origine du panier de trésors et du jeu heuristique ?",["Elinor Goldschmied","Maria Montessori","Emmi Pikler"],"Des objets du quotidien, non-jouets, à explorer librement vers 6-12 mois.",null],
+[3,"P","Deux enfants d'environ 2 ans jouent côte à côte sans vraiment interagir. Comment nomme-t-on cela ?",["Le jeu parallèle","Le jeu symbolique","Le jeu de règles"],"Entre 1 et 2 ans, l'enfant aime être à côté d'autres enfants. L'interaction vient ensuite.","FER"],
+[3,"F","Combien de cubes un enfant de 2 ans peut-il empiler environ ?",["6 ou 7","2 ou 3","15 à 20"],"2 ou 3 cubes à 15 mois, 3 ou 4 à 18 mois, 6 ou 7 à 2 ans, 9 ou 10 à 3 ans.","FER"],
+[3,"F","Vers quel âge un enfant enfile-t-il de grosses perles sur une corde ?",["Entre 2 et 3 ans","Vers 6 mois","Vers 5 ans"],"C'est aussi l'âge où il tourne une poignée de porte et fait des traits avec des ciseaux.","FER"],
+[3,"F","Quelle tâche réussit un enfant de 2 à 3 ans ?",["Un casse-tête de 4 pièces","Un casse-tête de 20 pièces","Un casse-tête de 100 pièces"],"À 3-4 ans, il réussit 6 à 10 pièces. À 5-6 ans, 15 à 20 pièces.","FER"],
+[3,"F","Vers quel âge un enfant nomme-t-il quelques couleurs ?",["Entre 3 et 4 ans","Vers 6 mois","Vers 12 mois"],"Il regroupe aussi les objets de même couleur.","FER"],
+[3,"P","Qu'appelle-t-on « imitation différée » ?",["Reproduire une situation vue quelques jours plus tôt","Imiter un geste immédiatement","Répéter un mot entendu"],"Elle apparaît entre 1 et 2 ans.","FER"],
+[3,"F","Entre 3 et 4 ans, que peut se créer un enfant ?",["Un ami imaginaire","Un journal intime","Un emploi du temps"],"Sa créativité se développe : il utilise de façon variée un même matériel de jeu.","FER"],
+[3,"P","Selon la charte nationale, quel rôle joue la nature ?",["Un rôle essentiel pour l'épanouissement des enfants","Un simple décor","Un risque à éviter"],"C'est le principe 6 de la charte nationale pour l'accueil du jeune enfant.","CHARTE"],
+[3,"F","Combien de temps avant le coucher évite-t-on les écrans ?",["Au moins 1 heure","10 minutes","Aucune règle"],"Le ministère conseille aussi d'éviter l'écran au réveil et dans la chambre des enfants.","ECRANS"],
+[3,"F","Vers quel âge un enfant pousse-t-il ou tire-t-il un jouet à roulettes en marchant ?",["Entre 1 et 2 ans","Vers 3 mois","Vers 5 ans"],"Il transporte aussi des objets et commence à courir.","FER"],
+/* ---- Le métier ---- */
+[4,"F","Quel est le nombre maximal d'enfants que peut accueillir une micro-crèche ?",["12 (avec un accueil en surnombre possible jusqu'à 115 %)","6","20"],"La capacité autorisée est de 12 enfants. Sous conditions, l'accueil en surnombre peut atteindre 115 %, soit 14 enfants.","MICRO"],
+[4,"F","Combien d'enfants une assistante maternelle peut-elle accueillir au titre de son agrément ?",["Jusqu'à 4","Jusqu'à 8","Jusqu'à 2"],"C'est la limite de l'article L. 421-4 du code de l'action sociale et des familles.","NORMA1"],
+[4,"F","Que signifie EAJE ?",["Établissement d'accueil du jeune enfant","École d'apprentissage du jeune éducateur","Espace d'activités jeux et éveil"],"Crèches, micro-crèches et haltes-garderies sont des EAJE.","DECRET"],
+[4,"P","Que signifie EJE ?",["Éducateur de jeunes enfants","Employé de jardin d'enfants","Encadrant de jeux éducatifs"],"Diplôme d'État de niveau bac+3, conférant le grade de licence, pour accompagner les enfants de moins de 7 ans.","EJE"],
+[4,"P","Combien de grands principes compte la charte nationale pour l'accueil du jeune enfant ?",["10","5","15"],"Le principe 1 reconnaît le jeune enfant comme « sujet, citoyen et personne de droit ».","CHARTE"],
+[4,"P","Que signifie CAP AEPE ?",["Accompagnant éducatif petite enfance","Assistant d'éveil et de protection de l'enfant","Aide éducative à la petite enfance"],"Ce CAP, ancien CAP petite enfance, est délivré par l'Éducation nationale.","AEPE"],
+[4,"P","Quel est le sigle du diplôme d'État d'auxiliaire de puériculture ?",["DEAP","DEJE","DEAS"],"La formation dure 1 an.","DEAP"],
+[4,"P","Quel est le taux d'encadrement dans une crèche collective ?",["1 professionnel pour 5 enfants qui ne marchent pas et 1 pour 8 qui marchent","1 professionnel pour 2 enfants","1 professionnel pour 12 enfants"],"Autre règle possible : 1 professionnel pour 6 enfants.","NORMA3"],
+[4,"P","Selon le référentiel national, que signifie la « référence » ?",["Un adulte référent durable, avec des relais pour la continuité","Un seul adulte, jamais remplacé","L'adulte que l'enfant choisit chaque jour"],"La référence n'est pas rigide : d'autres adultes peuvent s'occuper de l'enfant et le référent peut s'absenter. Elle renforce la sécurité d'attachement.","REF"],
+[4,"P","Que doit mettre en œuvre le projet d'établissement d'une crèche ?",["La charte nationale pour l'accueil du jeune enfant","Le programme de l'école maternelle","Le calendrier vaccinal"],"Il comprend un projet éducatif et mentionne les actions d'analyse des pratiques professionnelles et de formation.","DECRET"],
+[4,"P","Selon la charte, quelle est la garantie première d'un accueil de qualité ?",["Des professionnels qualifiés et en nombre suffisant","Des locaux neufs","Un grand nombre de jouets"],"C'est le principe 10 de la charte nationale.","CHARTE"],
+[4,"F","Combien d'enfants au maximum peut accueillir une maison d'assistants maternels (MAM) ?",["20, dont 16 de moins de 3 ans au plus","8","40"],"Elle réunit 1 à 6 assistants maternels, dont 4 au maximum exercent en même temps.","NORMA1"],
+[4,"P","Quel nombre de mineurs de moins de 11 ans un assistant maternel peut-il avoir sous sa responsabilité exclusive ?",["6 au plus, dont 4 de moins de 3 ans","4, tous de moins de 3 ans","10, dont 6 de moins de 3 ans"],"Ce nombre inclut ses propres enfants.","ASSMAT"],
+[4,"P","Quel est le rôle du référent « Santé et accueil inclusif » ?",["Conseiller l'équipe sur la santé du jeune enfant et l'accueil inclusif","Remplacer la direction","Soigner les enfants malades"],"Il informe, sensibilise et conseille la direction et l'équipe.","RSAI"],
+[4,"F","Selon le référentiel national, où se trouve le doudou à la crèche ?",["À la libre disposition des enfants","Rangé et donné seulement à la sieste","Retiré dès 2 ans"],"Il n'est pas indispensable et ne remplace pas le réconfort de l'adulte en cas de détresse.","REF"],
+/* ---- Famille et culture ---- */
+[5,"F","Dans quel pays est née Maria Montessori ?",["Italie","France","Suisse"],"Médecin italienne, elle a ouvert sa première « Casa dei Bambini » à Rome en 1907.",null],
+[5,"F","Dans la comptine « Une souris... », de quelle couleur est la souris ?",["Verte","Grise","Blanche"],"Les comptines enrichissent le rythme, la mémoire et le langage.",null],
+[5,"F","À partir de quel âge l'instruction est-elle obligatoire en France ?",["3 ans","5 ans","6 ans"],"Depuis la rentrée 2019. Une visite médicale est aussi prévue entre 3 et 4 ans.","INSTR"],
+[5,"F","Que signifie PMI ?",["Protection maternelle et infantile","Petite maison pour enfants","Prévention médicale individuelle"],"Un service du département : consultations, conseils aux parents et autorisation des modes d'accueil.","MICRO"],
+[5,"P","Qui a créé la Maison Verte, lieu d'accueil parents-enfants ouvert en 1979 ?",["Françoise Dolto","Boris Cyrulnik","Maria Montessori"],"Les tout-petits y viennent avec leurs parents, y rencontrent d'autres enfants et préparent la séparation.","DOLTO"],
+[5,"P","Quel psychiatre a popularisé la notion de résilience en France ?",["Boris Cyrulnik","Donald Winnicott","Serge Tisseron"],"Il a aussi présidé en 2020 la commission d'experts des 1000 premiers jours.","J1000"],
+[5,"P","Dans quel pays se trouve la pouponnière Lóczy, fondée par Emmi Pikler ?",["Hongrie","Pologne","Autriche"],"Fondée en 1946 à Budapest, dans la rue Lóczy. Elle porte le nom d'Institut Pikler depuis 1986.","WAIMH"],
+[5,"F","De combien de jours est le congé de paternité ?",["25 jours","7 jours","3 jours"],"Il a été porté à 25 jours dans le cadre de la politique des 1000 premiers jours.","J1000"],
+[5,"F","Que dit le code civil depuis 2019 de l'autorité parentale ?",["Elle s'exerce sans violences physiques ni psychologiques","Elle autorise une fessée légère","Elle s'arrête à 6 ans"],"Loi du 10 juillet 2019 sur l'interdiction des violences éducatives ordinaires (article 371-1).","LOI2019"],
+[5,"F","Selon la charte nationale, quel enjeu est essentiel dès la prime enfance ?",["La lutte contre les stéréotypes sexistes","La compétition entre enfants","L'apprentissage précoce de la lecture"],"C'est le principe 7 de la charte.","CHARTE"],
+[5,"F","Que permettent l'art, la culture et les échanges interculturels à l'enfant, selon la charte ?",["Construire sa place dans le monde qu'il découvre","Apprendre à lire plus vite","Occuper les temps d'attente"],"C'est le principe 5 de la charte nationale.","CHARTE"],
+[5,"F","En quelle année la Convention internationale des droits de l'enfant a-t-elle été adoptée ?",["1989","1959","2009"],"Elle fonde le référentiel national de qualité d'accueil, avec la loi de 2019 sur les violences éducatives ordinaires.","REF"],
+[5,"P","Qu'est-ce qu'un lieu d'accueil enfants-parents (LAEP) ?",["Un lieu où l'enfant vient jouer avec son parent, inspiré de la Maison Verte","Une crèche de quartier","Une école maternelle"],"Soutenu par la Caf, il permet à l'enfant de découvrir la vie en groupe et au parent de partager un moment avec lui.","LAEP"],
+[5,"P","Depuis 2022, quel entretien est proposé aux parents après la naissance, dans le cadre des 1000 premiers jours ?",["L'entretien postnatal précoce","Un entretien à l'école","Un entretien avec le maire"],"Il complète l'entretien prénatal précoce et le dispositif de sage-femme référente.","J1000"],
+[5,"P","À quel moment commencent les « 1000 premiers jours » selon le ministère ?",["Au 4e mois de grossesse","À la naissance","À l'entrée à l'école"],"Ils s'achèvent aux 2 ans révolus de l'enfant.","J1000"]
+];
+var STEPS=24;
+function dims(n){var g=n*(n+1)/2;return{size:n,goal:g,cap:Math.ceil(g/6),maxErr:g+2}}
+function cfg(){return(S.screen==="mp"&&MP.state)?MP.state:G}
+var S={screen:"menu",size:3,myName:"",joinCode:"",mode:"coop",level:"mix",timer:false,n:2,names:["Équipe 1","Équipe 2","Équipe 3","Équipe 4"]};
+var G=null, TI=null;
+var app=document.getElementById("app");
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function srcLine(q){var s=q[5]&&SRC[q[5]];if(!s)return "";return '<div class="mut" style="margin-top:6px;font-size:13px">Source : '+(s[1]?'<a href="'+esc(s[1])+'" target="_blank" rel="noopener" style="color:inherit">'+esc(s[0])+'</a>':esc(s[0]))+'</div>'}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function catAt(i){return (i+Math.floor(i/6))%6}
+function ptAt(i){var r=Math.floor(i/6),c=i%6,cc=(r%2===0)?c:5-c;return[36+cc*53.6,44+r*76]}
+
+function towerSVG(cubes,size,rows){
+ var c0=cfg(),n=rows||(c0&&c0.size)||3,cols=[],j,k,total=n*(n+1)/2;
+ for(j=0;j<6;j++)for(k=0;k<(cubes[j]||0);k++)cols.push(j);
+ var u=14,g=2,W=n*(u+g)-g,idx=0,o='<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+W+' '+W+'" role="img" aria-label="Pyramide : '+cols.length+' cubes sur '+total+'">';
+ for(var r=0;r<n;r++){var cnt=n-r,x0=(W-(cnt*(u+g)-g))/2,y=W-(r+1)*(u+g)+g;
+  for(var c=0;c<cnt;c++){var col=cols[idx++],on=col!==undefined,x=x0+c*(u+g);
+   o+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+u+'" height="'+u+'" rx="3" fill="'+(on?CATS[col].f:'none')+'" stroke="'+(on?CATS[col].s:'var(--mut)')+'" stroke-width="1.2"'+(on?'':' stroke-dasharray="2.5 2.5"')+'/>'}}
+ return o+'</svg>'}
+function sizeCard(){
+ var o=[[2,"Courte","3 cubes"],[3,"Classique","6 cubes"],[4,"Longue","10 cubes"],[5,"Marathon","15 cubes"]],h='<div class="card"><h2>Taille de la pyramide</h2><div class="grid2">';
+ o.forEach(function(x){h+='<button class="sel '+(S.size===x[0]?"on":"")+'" onclick="setS(\'size\','+x[0]+')">'+x[1]+'<small>'+x[2]+' · '+x[0]+' niveaux</small></button>'});
+ return h+'</div><div style="display:flex;justify-content:center;margin-top:12px">'+towerSVG(blank(),90,S.size)+'</div></div>'}
+
+function dieSVG(v,size){
+ var P={1:[[22,22]],2:[[14,14],[30,30]],3:[[14,14],[22,22],[30,30]],4:[[14,14],[30,14],[14,30],[30,30]],5:[[14,14],[30,14],[22,22],[14,30],[30,30]],6:[[14,13],[30,13],[14,22],[30,22],[14,31],[30,31]]};
+ var o='<svg width="'+size+'" height="'+size+'" viewBox="0 0 44 44" role="img" aria-label="Dé : '+v+'"><rect x="3" y="3" width="38" height="38" rx="12" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>';
+ (P[v]||[]).forEach(function(p){o+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.4" fill="#633806"/>'});
+ return o+'</svg>'}
+
+function boardSVG(pawns,curIdx){
+ var pts=[],i;for(i=0;i<STEPS;i++)pts.push(ptAt(i));
+ var h='<polyline points="'+pts.map(function(p){return p[0].toFixed(1)+','+p[1]}).join(' ')+'" fill="none" stroke="var(--soft)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>';
+ var M={0:"Naissance",6:"6 mois",12:"1 an",18:"2 ans",23:"3 ans"};
+ for(i=0;i<STEPS;i++){var p=pts[i],k=catAt(i),big=M[i]!==undefined;
+  h+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1]+'" r="'+(big?19:14)+'" fill="'+CATS[k].f+'" stroke="'+CATS[k].s+'" stroke-width="'+(big?2:1)+'"/>';
+  if(big){h+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+35)+'" text-anchor="middle" font-size="11" font-weight="800" fill="var(--mut)">'+M[i]+'</text>'}}
+ var n=pawns.length;
+ pawns.forEach(function(t,ti){
+  var p=pts[t.pos],dx=n>1?(ti-(n-1)/2)*13:0,cur=(ti===curIdx);
+  h+='<circle cx="'+(p[0]+dx).toFixed(1)+'" cy="'+(p[1]-1)+'" r="'+(cur?10:8)+'" fill="'+TEAMCOL[ti]+'" stroke="var(--card)" stroke-width="2.5"/>';
+  if(n>1)h+='<text x="'+(p[0]+dx).toFixed(1)+'" y="'+(p[1]+3)+'" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">'+(ti+1)+'</text>'});
+ return '<svg width="100%" viewBox="0 0 340 322" role="img" aria-label="Parcours de la naissance à 3 ans">'+h+'</svg>'}
+
+function render(){
+ var s=S.screen;
+ if(s==="menu")renderMenu();else if(s==="setup")renderSetup();else if(s==="game")renderGame();else if(s==="end")renderEnd();
+ else if(s==="mpcreate")renderMpCreate();else if(s==="mpjoin")renderMpJoin();else if(s==="mp")drawMP();
+ if(S._last!==s){S._last=s;window.scrollTo(0,0)}}
+function go(s){S.screen=s;MP.err="";render()}
+
+function renderSetup(){
+ var h='<button class="ghost" onclick="go(\'menu\')">‹ Menu</button>'+titleBlock(),i;
+ h+='<div class="card"><h2>Mode de jeu</h2><div class="grid2">'+
+ '<button class="sel '+(S.mode==="coop"?"on":"")+'" onclick="setS(\'mode\',\'coop\')">Coopératif<small>Toute la table construit une pyramide</small></button>'+
+ '<button class="sel '+(S.mode==="comp"?"on":"")+'" onclick="setS(\'mode\',\'comp\')">Compétitif<small>Chaque équipe sa pyramide</small></button></div>';
+ if(S.mode==="comp"){h+='<p class="mut" style="margin-top:12px">Nombre d\'équipes</p><div class="grid2" style="grid-template-columns:repeat(3,minmax(0,1fr))">';
+  [2,3,4].forEach(function(n){h+='<button class="sel '+(S.n===n?"on":"")+'" style="text-align:center" onclick="setS(\'n\','+n+')">'+n+'</button>'});
+  h+='</div><div style="display:grid;gap:8px;margin-top:10px">';
+  for(i=0;i<S.n;i++)h+='<div class="row"><span style="flex:none;width:26px;height:26px;border-radius:50%;background:'+TEAMCOL[i]+';color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><input type="text" maxlength="20" aria-label="Nom de l\'équipe '+(i+1)+'" value="'+esc(S.names[i])+'" oninput="S.names['+i+']=this.value"></div>';
+  h+='</div>'}
+ h+='</div><div class="card"><h2>Niveau des questions</h2><div style="display:grid;gap:8px">'+
+ lv("fam","Famille","Parents et grand public")+lv("pro","Professionnels","Crèche, assistante maternelle")+lv("mix","Mixte","Un peu de tout, pour jouer ensemble")+'</div>'+
+ '<label class="row" style="margin-top:12px;cursor:pointer"><input type="checkbox" '+(S.timer?"checked":"")+' onchange="S.timer=this.checked" style="width:20px;height:20px"> <span>Chrono de 30 secondes par question</span></label></div>'+sizeCard()+
+ '<button class="main" style="margin-top:14px" onclick="startGame()">Jouer</button>'+
+ '<details class="card"><summary>Règles en bref</summary><p class="mut" style="margin-top:8px">À chaque tour, lancez le dé et avancez sur le parcours. La couleur de la case donne la catégorie de la question. Une bonne réponse ajoute un cube de cette couleur à la pyramide. Quand une couleur est complète, choisissez une catégorie qui vous manque.</p><p class="mut"><b>Coopératif :</b> la table répond ensemble. Gagnez en complétant la pyramide avant d\'accumuler trop d\'erreurs.</p><p class="mut"><b>Compétitif :</b> les équipes jouent chacune leur tour. La première à compléter sa pyramide gagne.</p></details>';
+ app.innerHTML=h}
+function lv(k,t,s){return '<button class="sel '+(S.level===k?"on":"")+'" onclick="setS(\'level\',\''+k+'\')">'+t+'<small>'+s+'</small></button>'}
+function setS(k,v){S[k]=v;render()}
+
+function startGame(){
+ var names=[];
+ if(S.mode==="coop")names=["Votre table"];else for(var i=0;i<S.n;i++)names.push((S.names[i]||"").trim()||("Équipe "+(i+1)));
+ G={teams:names.map(function(n){return{name:n,pos:0,cubes:blank()}}),cur:0,errors:0,used:{},die:null,phase:"roll",cat:null,q:null,opts:null,chosen:null,left:30,rolling:false,msg:""};Object.assign(G,dims(S.size));
+ S.screen="game";render()}
+
+function nbCubes(t){return t.cubes.reduce(function(a,b){return a+b},0)}
+
+function renderGame(){
+ var t=G.teams[G.cur],h='<div class="row" style="justify-content:space-between"><b style="font-size:18px">Cube à cube</b><button class="ghost" onclick="quit()">Quitter</button></div>';
+ if(S.mode==="coop"){
+  h+='<div class="card row" style="margin-top:10px">'+towerSVG(t.cubes,64)+'<div style="flex:1"><b>'+nbCubes(t)+' cube'+(nbCubes(t)>1?"s":"")+' sur '+G.goal+'</b><div class="mut" style="margin-bottom:6px">Erreurs permises : '+(G.maxErr-G.errors)+'</div><div class="dots" aria-label="'+G.errors+' erreurs sur '+G.maxErr+'">';
+  for(var i=0;i<G.maxErr;i++)h+='<span class="dot'+(i<G.errors?" on":"")+'"></span>';
+  h+='</div></div></div>'
+ }else{
+  h+='<div class="grid2" style="margin-top:10px">';
+  G.teams.forEach(function(tm,ti){h+='<div class="team'+(ti===G.cur?" cur":"")+'">'+towerSVG(tm.cubes,40)+'<div style="min-width:0"><div style="font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+TEAMCOL[ti]+';margin-right:4px"></span>'+esc(tm.name)+'</div><div class="mut" style="font-size:12px">'+nbCubes(tm)+' / '+G.goal+'</div></div></div>'});
+  h+='</div>'}
+ h+='<div class="card" style="padding:6px 4px 0">'+boardSVG(G.teams,G.cur)+'</div>';
+ if(G.phase==="roll"){
+  h+='<div class="card row">'+(G.die?dieSVG(G.die,52):dieSVG(1,52))+'<div style="flex:1"><b>'+(S.mode==="comp"?"À "+esc(t.name)+" de jouer":"À vous de jouer")+'</b><div class="mut">'+(G.msg||"Lancez le dé pour avancer.")+'</div></div></div><button class="main" style="margin-top:10px" onclick="roll()"'+(G.rolling?" disabled":"")+'>Lancer le dé</button>'}
+ else if(G.phase==="pick"){
+  h+='<div class="card"><b>Vous avez déjà le cube '+CATS[G.cat].n.toLowerCase()+'.</b><p class="mut">Choisissez une catégorie qui vous manque :</p><div class="chips">';
+  for(var c=0;c<6;c++)if(t.cubes[c]<G.cap)h+='<button class="chip" style="background:'+CATS[c].f+';color:'+CATS[c].t+'" onclick="ask('+c+')">'+CATS[c].n+'</button>';
+  h+='</div></div>'}
+ else{h+=questionCard()}
+ app.innerHTML=h}
+
+function questionCard(){
+ var c=CATS[G.cat],q=G.q,fb=G.phase==="feedback",ok=fb&&G.opts[G.chosen]&&G.opts[G.chosen].ok;
+ var h='<div class="card" style="padding:0;overflow:hidden"><div style="background:'+c.f+';color:'+c.t+';padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><b>'+c.n+'</b><span class="pill" style="background:rgba(255,255,255,.55);color:'+c.t+'">'+(q[1]==="P"?"Pro":"Tout public")+'</span></div><div style="padding:14px">';
+ if(S.timer&&!fb)h+='<div class="mut" style="text-align:right" id="timer">'+G.left+' s</div>';
+ h+='<p style="font-size:18px;font-weight:800;margin-bottom:6px">'+q[2]+'</p>';
+ G.opts.forEach(function(o,i){
+  var cls="opt";if(fb){if(o.ok)cls+=" ok";else if(i===G.chosen)cls+=" ko"}
+  h+='<button class="'+cls+'" '+(fb?"disabled":'onclick="answer('+i+')"')+'><span class="l">'+"ABC"[i]+'</span><span>'+o.t+'</span></button>'});
+ if(fb){
+  var t=G.teams[G.cur],head=ok?"Bonne réponse !":(G.chosen===-1?"Temps écoulé.":"Pas tout à fait.");
+  var tail=ok?" Le cube "+c.n.toLowerCase()+" rejoint la tour.":(S.mode==="coop"?" Une erreur de plus pour la table.":"");
+  h+='<div class="note" style="background:'+(ok?"var(--okbg)":"var(--kobg)")+';color:'+(ok?"var(--ok)":"var(--ko)")+'"><b>'+head+'</b>'+tail+'</div><div class="note"><b>À retenir :</b> '+q[4]+srcLine(q)+'</div><button class="main" style="margin-top:12px" onclick="next()">Continuer</button>'}
+ return h+'</div></div>'}
+
+function roll(){
+ if(G.rolling)return;G.rolling=true;var n=0,t=G.teams[G.cur];
+ var iv=setInterval(function(){
+  G.die=1+Math.floor(Math.random()*6);n++;
+  if(n<9){render();return}
+  clearInterval(iv);G.rolling=false;
+  t.pos=(t.pos+G.die)%STEPS;G.cat=catAt(t.pos);
+  G.msg="";
+  if(t.cubes[G.cat]>=G.cap){
+   var missing=t.cubes.filter(function(x){return x<G.cap}).length;
+   if(missing>0){G.phase="pick"}else{G.phase="roll"}
+   render()}
+  else ask(G.cat)},80)}
+
+function ask(c){
+ var t=G.teams[G.cur];G.cat=c;
+ var want=S.level==="fam"?"F":S.level==="pro"?"P":null;
+ var pool=[];Q.forEach(function(q,i){if(q[0]===c&&(!want||q[1]===want))pool.push(i)});
+ if(!pool.length)Q.forEach(function(q,i){if(q[0]===c)pool.push(i)});
+ var fresh=pool.filter(function(i){return!G.used[i]});
+ if(!fresh.length){pool.forEach(function(i){delete G.used[i]});fresh=pool}
+ var idx=fresh[Math.floor(Math.random()*fresh.length)];G.used[idx]=true;
+ G.q=Q[idx];G.opts=shuffle(G.q[3].map(function(x,k){return{t:x,ok:k===0}}));
+ G.nq=(G.nq||0)+1;G.chosen=null;G.phase="question";G.left=30;render();
+ clearInterval(TI);
+ if(S.timer)TI=setInterval(function(){
+  G.left--;var el=document.getElementById("timer");if(el)el.textContent=G.left+" s";
+  if(G.left<=0){clearInterval(TI);answer(-1)}},1000)}
+
+function answer(i){
+ if(G.phase!=="question")return;clearInterval(TI);
+ G.chosen=i;var t=G.teams[G.cur],ok=i>=0&&G.opts[i].ok;
+ if(ok)t.cubes[G.cat]++;else if(S.mode==="coop")G.errors++;
+ G.phase="feedback";render()}
+
+function next(){
+ var t=G.teams[G.cur];
+ if(S.mode==="coop"){
+  if(nbCubes(t)>=G.goal){G.result="win";S.screen="end";render();return}
+  if(G.errors>=G.maxErr){G.result="lose";S.screen="end";render();return}
+ }else{
+  var w=-1;G.teams.forEach(function(tm,i){if(nbCubes(tm)>=G.goal&&w<0)w=i});
+  if(w>=0){G.result="win";G.winner=w;S.screen="end";render();return}
+  G.cur=(G.cur+1)%G.teams.length}
+ G.phase="roll";G.msg="";render()}
+
+function renderEnd(){
+ var h='<div class="card" style="text-align:center"><h1 style="margin-bottom:8px">';
+ if(S.mode==="coop"){
+  var t=G.teams[0];
+  h+=G.result==="win"?"La pyramide est terminée !":"La nuit tombe...";
+  h+='</h1><div style="display:flex;justify-content:center">'+towerSVG(t.cubes,120)+'</div><p style="margin-top:10px">'+(G.result==="win"?"Bravo, vous avez terminé la pyramide ensemble.":"Il vous manque "+(G.goal-nbCubes(t))+" cube"+(G.goal-nbCubes(t)>1?"s":"")+". Rejouez pour tenter de les trouver.")+'</p>'
+ }else{
+  var w=G.teams[G.winner];
+  h+='Victoire de '+esc(w.name)+' !</h1><div style="display:flex;justify-content:center">'+towerSVG(w.cubes,120)+'</div><div class="grid2" style="margin-top:12px">';
+  G.teams.forEach(function(tm,i){h+='<div class="team">'+towerSVG(tm.cubes,36)+'<div style="min-width:0"><b style="font-size:13px">'+esc(tm.name)+'</b><div class="mut" style="font-size:12px">'+nbCubes(tm)+' / '+G.goal+'</div></div></div>'});
+  h+='</div>'}
+ h+='</div><button class="main" style="margin-top:12px" onclick="startGame()">Rejouer</button><button class="ghost" style="width:100%;margin-top:8px" onclick="quit()">Changer les réglages</button>';
+ app.innerHTML=h}
+
+function quit(){clearInterval(TI);S.screen="setup";render()}
+
+/* ===== Multijoueur en ligne (Supabase, sondage toutes les secondes) ===== */
+var SB_URL="https://yyqppsvihdgmohnuocqr.supabase.co",SB_KEY="sb_publishable_9ofD2pgCGTTUoVBCQKHeNg_Nb6HeDNc";
+var MP={code:null,pid:null,state:null,version:0,busy:false,poll:null,tick:null,err:"",copied:false,key:"",timeoutKey:-1,creating:false};
+var LV={mix:"Mixte",fam:"Famille",pro:"Professionnels"};
+function rpc(fn,args){return fetch(SB_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(args)}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function newId(){return Math.random().toString(36).slice(2,10)}
+function memo(k,v){try{if(v===undefined)return sessionStorage.getItem(k);sessionStorage.setItem(k,v)}catch(e){}return null}
+function randCode(){var L="ABCDEFGHJKLMNPQRSTUVWXYZ",s="";for(var i=0;i<4;i++)s+=L[Math.floor(Math.random()*L.length)];return s}
+function titleBlock(){var sq="";for(var i=0;i<6;i++)sq+='<span style="width:22px;height:22px;border-radius:6px;background:'+CATS[i].f+';border:1.5px solid '+CATS[i].s+'"></span>';return '<div style="text-align:center;padding:10px 0 4px"><div style="display:inline-flex;gap:6px;margin-bottom:6px">'+sq+'</div><h1>Cube à cube</h1><p class="mut">Le jeu de la petite enfance, de la naissance à 3 ans</p></div>'}
+function bigBtn(t,s,fn){return '<button class="sel" onclick="'+fn+'" style="padding:14px"><span style="font-size:17px;font-weight:800">'+t+'</span><small>'+s+'</small></button>'}
+
+function renderMenu(){
+ app.innerHTML=titleBlock()+'<div style="display:grid;gap:10px;margin-top:14px">'+
+  bigBtn("Jouer sur cet appareil","Un seul écran, à passer de main en main","go('setup')")+
+  bigBtn("Créer une partie en ligne","Chacun joue sur son téléphone","go('mpcreate')")+
+  bigBtn("Rejoindre une partie","Avec le code à 4 lettres","go('mpjoin')")+'</div>'+
+  '<p class="mut" style="text-align:center;margin-top:16px">Pour les familles comme pour les professionnels de la petite enfance.</p>'}
+
+function modeLevelCards(){
+ return '<div class="card"><h2>Mode de jeu</h2><div class="grid2">'+
+ '<button class="sel '+(S.mode==="coop"?"on":"")+'" onclick="setS(\'mode\',\'coop\')">Coopératif<small>La table construit une pyramide</small></button>'+
+ '<button class="sel '+(S.mode==="comp"?"on":"")+'" onclick="setS(\'mode\',\'comp\')">Compétitif<small>Chacun sa pyramide</small></button></div></div>'+
+ '<div class="card"><h2>Niveau des questions</h2><div style="display:grid;gap:8px">'+
+ lv("fam","Famille","Parents et grand public")+lv("pro","Professionnels","Crèche, assistante maternelle")+lv("mix","Mixte","Un peu de tout, pour jouer ensemble")+'</div>'+
+ '<label class="row" style="margin-top:12px;cursor:pointer"><input type="checkbox" '+(S.timer?"checked":"")+' onchange="S.timer=this.checked" style="width:20px;height:20px"> <span>Chrono de 30 secondes par question</span></label></div>'+sizeCard()}
+function nameInput(){return '<input type="text" maxlength="16" aria-label="Votre prénom" placeholder="Votre prénom" value="'+esc(S.myName)+'" oninput="S.myName=this.value;memo(\'cac:name\',this.value)">'}
+function errBox(){return MP.err?'<div class="note" style="background:var(--kobg);color:var(--ko)">'+esc(MP.err)+'</div>':""}
+
+function renderMpCreate(){
+ app.innerHTML='<button class="ghost" onclick="go(\'menu\')">‹ Menu</button><h1 style="margin:8px 0">Créer une partie</h1>'+
+ '<div class="card"><h2>Votre prénom</h2>'+nameInput()+'</div>'+modeLevelCards()+errBox()+
+ '<button class="main" style="margin-top:14px" onclick="createRoom()" '+(MP.creating?"disabled":"")+'>'+(MP.creating?"Création...":"Créer la salle")+'</button>'}
+function renderMpJoin(){
+ app.innerHTML='<button class="ghost" onclick="go(\'menu\')">‹ Menu</button><h1 style="margin:8px 0">Rejoindre une partie</h1>'+
+ '<div class="card"><h2>Code de la salle</h2><input type="text" maxlength="4" aria-label="Code de la salle" placeholder="ABCD" value="'+esc(S.joinCode)+'" oninput="S.joinCode=this.value.toUpperCase()" style="text-transform:uppercase;letter-spacing:6px;font-size:22px;font-weight:800;text-align:center"></div>'+
+ '<div class="card"><h2>Votre prénom</h2>'+nameInput()+'</div>'+errBox()+
+ '<button class="main" style="margin-top:14px" onclick="joinRoom()">Rejoindre</button>'}
+
+/* --- actions : chacune reçoit l'état courant et renvoie le nouvel état (ou null) --- */
+function teamOf(R){return R.mode==="coop"?R.shared:R.players[R.cur]}
+function blank(){return [0,0,0,0,0,0]}
+function act_join(p){return function(R){
+ if(R.phase!=="lobby"||R.players.length>=6)return null;
+ if(R.players.some(function(x){return x.id===p.id}))return null;
+ R.players.push({id:p.id,name:p.name,pos:0,cubes:blank()});return R}}
+function act_start(by){return function(R){
+ if(R.phase!=="lobby"||R.host!==by)return null;
+ if(R.mode==="comp"&&R.players.length<2)return null;
+ R.shared={pos:0,cubes:blank(),errors:0};R.players.forEach(function(p){p.pos=0;p.cubes=blank()});
+ R.cur=0;R.used=[];R.turn=0;R.die=0;R.res=null;R.phase="roll";return R}}
+function beginQ(R,c){
+ var want=R.level==="fam"?"F":R.level==="pro"?"P":null,pool=[];
+ Q.forEach(function(q,i){if(q[0]===c&&(!want||q[1]===want))pool.push(i)});
+ if(!pool.length)Q.forEach(function(q,i){if(q[0]===c)pool.push(i)});
+ var fresh=pool.filter(function(i){return R.used.indexOf(i)<0});
+ if(!fresh.length){R.used=R.used.filter(function(i){return pool.indexOf(i)<0});fresh=pool}
+ var qi=fresh[Math.floor(Math.random()*fresh.length)];
+ R.used.push(qi);R.cat=c;R.qi=qi;R.perm=shuffle([0,1,2]);R.votes={};R.turn++;
+ R.deadline=R.timer?Date.now()+30000:0;R.res=null;R.phase="question"}
+function act_roll(by){return function(R){
+ if(R.phase!=="roll"||R.players[R.cur].id!==by)return null;
+ var t=teamOf(R);R.die=1+Math.floor(Math.random()*6);t.pos=(t.pos+R.die)%STEPS;
+ var c=catAt(t.pos);R.cat=c;
+ if(t.cubes[c]>=R.cap)R.phase="pick";else beginQ(R,c);return R}}
+function act_pick(by,c){return function(R){
+ if(R.phase!=="pick"||R.players[R.cur].id!==by||teamOf(R).cubes[c]>=R.cap)return null;
+ beginQ(R,c);return R}}
+function resolveQ(R){
+ var act=R.players[R.cur].id,tally=[0,0,0],pick=-1;
+ Object.keys(R.votes).forEach(function(id){tally[R.votes[id]]++});
+ if(R.mode==="comp"){pick=R.votes[act]!==undefined?R.votes[act]:-1}
+ else{var mx=Math.max(tally[0],tally[1],tally[2]);
+  if(mx>0){var tops=[0,1,2].filter(function(k){return tally[k]===mx});
+   if(tops.length===1)pick=tops[0];else if(R.votes[act]!==undefined&&tops.indexOf(R.votes[act])>=0)pick=R.votes[act]}}
+ var ok=pick>=0&&R.perm[pick]===0,t=teamOf(R);
+ if(ok)t.cubes[R.cat]++;else if(R.mode==="coop")R.shared.errors++;
+ R.res={ok:ok,pick:pick,tally:tally};R.deadline=0;R.phase="feedback"}
+function act_answer(by,k){return function(R){
+ if(R.phase!=="question"||R.votes[by]!==undefined)return null;
+ if(!R.players.some(function(p){return p.id===by}))return null;
+ if(R.mode==="comp"&&R.players[R.cur].id!==by)return null;
+ R.votes[by]=k;
+ var need=R.mode==="coop"?R.players.length:1;
+ if(Object.keys(R.votes).length>=need)resolveQ(R);return R}}
+function act_force(by){return function(R){
+ if(R.phase!=="question"||R.host!==by)return null;resolveQ(R);return R}}
+function act_timeout(){return function(R){
+ if(R.phase!=="question"||!R.deadline||Date.now()<R.deadline+1500)return null;resolveQ(R);return R}}
+function sumCubes(t){return t.cubes.reduce(function(a,b){return a+b},0)}
+function act_next(){return function(R){
+ if(R.phase!=="feedback")return null;
+ if(R.mode==="coop"){
+  if(sumCubes(R.shared)>=R.goal){R.phase="end";R.result="win";return R}
+  if(R.shared.errors>=R.maxErr){R.phase="end";R.result="lose";return R}
+ }else{
+  for(var i=0;i<R.players.length;i++)if(sumCubes(R.players[i])>=R.goal){R.phase="end";R.result="win";R.winner=i;return R}}
+ R.cur=(R.cur+1)%R.players.length;R.res=null;R.phase="roll";return R}}
+function act_skip(by){return function(R){
+ if(R.host!==by||(R.phase!=="roll"&&R.phase!=="pick"))return null;
+ R.cur=(R.cur+1)%R.players.length;R.phase="roll";return R}}
+function act_restart(by){return function(R){
+ if(R.host!==by||R.phase!=="end")return null;
+ R.phase="lobby";R.res=null;R.result=null;R.winner=null;return R}}
+
+/* --- réseau --- */
+async function mutate(fn){
+ MP.busy=true;
+ try{
+  var base={state:MP.state,version:MP.version};
+  for(var i=0;i<6;i++){
+   var ns=fn(clone(base.state));if(!ns)break;
+   var r=await rpc("cac_update_room",{p_code:MP.code,p_version:base.version,p_state:ns});
+   if(r&&r.ok){MP.state=ns;MP.version=r.version;MP.err="";break}
+   if(r&&r.state){base={state:r.state,version:r.version};MP.state=r.state;MP.version=r.version;continue}
+   throw new Error("update")}
+ }catch(e){MP.err="Connexion instable. Réessayez."}
+ MP.busy=false;if(S.screen==="mp")render()}
+async function pollOnce(){
+ if(MP.busy||!MP.code)return;
+ try{
+  var r=await rpc("cac_get_room",{p_code:MP.code});
+  if(!r){if(MP.err!=="Cette salle n'existe plus."){MP.err="Cette salle n'existe plus.";render()}return}
+  var changed=(r.version!==MP.version);
+  if(changed){MP.state=r.state;MP.version=r.version}
+  if(MP.err){MP.err="";changed=true}
+  if(changed&&!MP.busy)render()
+ }catch(e){if(!MP.err){MP.err="Connexion perdue. Nouvelle tentative...";render()}}}
+function tickOnce(){
+ var R=MP.state;if(!R||R.phase!=="question"||!R.deadline)return;
+ var left=Math.max(0,Math.ceil((R.deadline-Date.now())/1000)),el=document.getElementById("timer");
+ if(el)el.textContent=left+" s";
+ if(Date.now()>R.deadline+1500&&MP.timeoutKey!==R.turn&&!MP.busy){MP.timeoutKey=R.turn;mutate(act_timeout())}}
+function enterRoom(code,pid,R,version){
+ MP.code=code;MP.pid=pid;MP.state=R;MP.version=version;MP.err="";MP.key="";memo("cac:pid:"+code,pid);
+ clearInterval(MP.poll);clearInterval(MP.tick);
+ MP.poll=setInterval(pollOnce,1000);MP.tick=setInterval(tickOnce,250);
+ S.screen="mp";render()}
+function leaveRoom(){clearInterval(MP.poll);clearInterval(MP.tick);MP.code=null;MP.state=null;MP.err="";S.screen="menu";render()}
+
+async function createRoom(){
+ if(MP.creating)return;MP.creating=true;MP.err="";render();
+ var name=(S.myName||"").trim()||"Joueur 1",pid=newId();
+ var st={v:1,mode:S.mode,level:S.level,timer:!!S.timer,phase:"lobby",host:pid,players:[{id:pid,name:name,pos:0,cubes:blank()}],cur:0,used:[],turn:0,die:0,size:S.size,goal:dims(S.size).goal,cap:dims(S.size).cap,maxErr:dims(S.size).maxErr,shared:{pos:0,cubes:blank(),errors:0}};
+ try{
+  for(var i=0;i<6;i++){
+   var code=randCode(),r=await rpc("cac_create_room",{p_code:code,p_state:st});
+   if(r&&r.ok){MP.creating=false;enterRoom(code,pid,st,r.version);return}}
+  MP.err="Impossible de créer la salle. Réessayez."
+ }catch(e){MP.err="Connexion impossible. Vérifiez votre réseau."}
+ MP.creating=false;render()}
+async function joinRoom(){
+ var code=(S.joinCode||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4),name=(S.myName||"").trim();
+ MP.err="";
+ if(code.length<4){MP.err="Entrez le code à 4 lettres.";render();return}
+ if(!name){MP.err="Entrez votre prénom.";render();return}
+ try{
+  var r=await rpc("cac_get_room",{p_code:code});
+  if(!r){MP.err="Salle introuvable. Vérifiez le code.";render();return}
+  var pid=memo("cac:pid:"+code)||newId(),known=r.state.players.some(function(p){return p.id===pid});
+  if(!known&&r.state.phase!=="lobby"){MP.err="Cette partie a déjà commencé.";render();return}
+  enterRoom(code,pid,r.state,r.version);
+  if(!known){
+   await mutate(act_join({id:pid,name:name}));
+   if(!MP.state.players.some(function(p){return p.id===pid})){var m=MP.state.players.length>=6?"La salle est pleine.":"Impossible de rejoindre la salle.";leaveRoom();MP.err=m;S.screen="mpjoin";render()}}
+ }catch(e){MP.err="Connexion impossible. Vérifiez votre réseau.";render()}}
+function copyLink(){
+ var url=location.href.split("?")[0].split("#")[0]+"?salle="+MP.code;
+ try{navigator.clipboard.writeText(url).then(function(){MP.copied=true;render()},function(){})}catch(e){}}
+
+/* --- affichage de la salle --- */
+function topbar(){return '<div class="row" style="justify-content:space-between"><b style="font-size:18px">Cube à cube</b><span class="pill" style="background:var(--accbg);color:var(--acc)">Salle '+MP.code+'</span><button class="ghost" onclick="leaveRoom()">Quitter</button></div>'}
+function drawMP(){
+ var R=MP.state;
+ if(!R){app.innerHTML=topbar()+errBox();return}
+ if(R.phase==="lobby")drawLobby(R);else if(R.phase==="end")drawMpEnd(R);else drawMpGame(R)}
+function modeLabel(R){return (R.mode==="coop"?"Coopératif":"Compétitif")+" · "+LV[R.level]+(R.timer?" · chrono 30 s":"")+" · pyramide de "+R.goal+" cubes"}
+function drawLobby(R){
+ var host=R.host===MP.pid,h=topbar()+errBox()+'<div class="card" style="text-align:center"><div class="mut">Code de la salle</div><div style="font-size:44px;font-weight:800;letter-spacing:10px;margin:4px 0">'+MP.code+'</div><p class="mut">Les autres joueurs choisissent « Rejoindre une partie » et saisissent ce code.</p><button onclick="copyLink()">'+(MP.copied?"Lien copié":"Copier le lien d\'invitation")+'</button></div>'+
+ '<div class="card"><h2>Joueurs ('+R.players.length+'/6)</h2><div style="display:grid;gap:8px">';
+ R.players.forEach(function(p,i){h+='<div class="team" style="'+(p.id===MP.pid?"border-color:var(--acc)":"")+'"><span style="flex:none;width:26px;height:26px;border-radius:50%;background:'+TEAMCOL[i%4]+';color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</b>'+(p.id===R.host?'<span class="pill" style="background:var(--soft)">Hôte</span>':"")+(p.id===MP.pid?'<span class="pill" style="background:var(--accbg);color:var(--acc)">Vous</span>':"")+'</div>'});
+ h+='</div><p class="mut" style="margin-top:10px">'+modeLabel(R)+'</p></div>';
+ if(host){var need=R.mode==="comp"&&R.players.length<2;h+='<button class="main" style="margin-top:12px" onclick="mutate(act_start(MP.pid))" '+(need?"disabled":"")+'>Démarrer la partie</button>'+(need?'<p class="mut" style="text-align:center;margin-top:8px">Il faut au moins 2 joueurs en mode compétitif.</p>':"")}
+ else h+='<p class="mut" style="text-align:center;margin-top:14px">En attente du lancement par '+esc(R.players.filter(function(p){return p.id===R.host})[0].name)+'...</p>';
+ app.innerHTML=h}
+
+function drawMpGame(R){
+ var me=R.players.findIndex(function(p){return p.id===MP.pid}),act=R.players[R.cur],isAct=act.id===MP.pid,isHost=R.host===MP.pid,t=teamOf(R),h=topbar()+errBox();
+ if(R.mode==="coop"){
+  var s=R.shared;
+  h+='<div class="card row" style="margin-top:10px">'+towerSVG(s.cubes,64)+'<div style="flex:1"><b>'+sumCubes(s)+' cube'+(sumCubes(s)>1?"s":"")+' sur '+R.goal+'</b><div class="mut" style="margin-bottom:6px">Erreurs permises : '+(R.maxErr-s.errors)+'</div><div class="dots">';
+  for(var i=0;i<R.maxErr;i++)h+='<span class="dot'+(i<s.errors?" on":"")+'"></span>';
+  h+='</div></div></div>'
+ }else{
+  h+='<div class="grid2" style="margin-top:10px">';
+  R.players.forEach(function(p,i){h+='<div class="team'+(i===R.cur?" cur":"")+'">'+towerSVG(p.cubes,40)+'<div style="min-width:0"><div style="font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+TEAMCOL[i%4]+';margin-right:4px"></span>'+esc(p.name)+(i===me?" (vous)":"")+'</div><div class="mut" style="font-size:12px">'+sumCubes(p)+' / '+R.goal+'</div></div></div>'});
+  h+='</div>'}
+ h+='<div class="card" style="padding:6px 4px 0">'+boardSVG(R.mode==="coop"?[R.shared]:R.players,R.cur)+'</div><div id="panel">';
+ if(R.phase==="roll"||R.phase==="pick"){
+  h+='<div class="card row">'+dieSVG(R.die||1,52)+'<div style="flex:1"><b>'+(isAct?"À vous de jouer":"Au tour de "+esc(act.name))+'</b><div class="mut">'+(isAct?(R.phase==="roll"?"Lancez le dé pour avancer.":"Choisissez une catégorie."):"Patientez, il ou elle joue.")+'</div></div></div>';
+  if(R.phase==="roll"&&isAct)h+='<button class="main" style="margin-top:10px" onclick="mutate(act_roll(MP.pid))">Lancer le dé</button>';
+  if(R.phase==="pick"&&isAct){h+='<div class="card"><b>Vous avez déjà le cube '+CATS[R.cat].n.toLowerCase()+'.</b><p class="mut">Choisissez une catégorie qui vous manque :</p><div class="chips">';
+   for(var c=0;c<6;c++)if(t.cubes[c]<R.cap)h+='<button class="chip" style="background:'+CATS[c].f+';color:'+CATS[c].t+'" onclick="mutate(act_pick(MP.pid,'+c+'))">'+CATS[c].n+'</button>';
+   h+='</div></div>'}
+  if(isHost&&!isAct)h+='<button class="ghost" style="width:100%;margin-top:8px" onclick="mutate(act_skip(MP.pid))">Passer le tour de '+esc(act.name)+'</button>';
+ }else h+=mpQuestion(R,me,isAct,isHost);
+ h+='</div>';
+ app.innerHTML=h;
+ var key=R.phase+":"+R.turn+":"+R.cur;
+ if(MP.key!==key){MP.key=key;var el=document.getElementById("panel");if(el&&el.scrollIntoView)el.scrollIntoView({block:"nearest",behavior:"smooth"})}}
+
+function mpQuestion(R,me,isAct,isHost){
+ var q=Q[R.qi],c=CATS[R.cat],fb=R.phase==="feedback",mine=R.votes[MP.pid];
+ var canVote=!fb&&mine===undefined&&(R.mode==="coop"?me>=0:isAct);
+ var h='<div class="card" style="padding:0;overflow:hidden"><div style="background:'+c.f+';color:'+c.t+';padding:10px 14px;display:flex;justify-content:space-between;align-items:center"><b>'+c.n+'</b><span class="pill" style="background:rgba(255,255,255,.55);color:'+c.t+'">'+(q[1]==="P"?"Pro":"Tout public")+'</span></div><div style="padding:14px">';
+ if(R.deadline&&!fb)h+='<div class="mut" style="text-align:right" id="timer">'+Math.max(0,Math.ceil((R.deadline-Date.now())/1000))+' s</div>';
+ h+='<p style="font-size:18px;font-weight:800;margin-bottom:6px">'+q[2]+'</p>';
+ R.perm.forEach(function(orig,k){
+  var cls="opt",extra="";
+  if(fb){if(orig===0)cls+=" ok";else if(R.res.pick===k)cls+=" ko"}
+  else if(mine===k)extra=' style="border-color:var(--acc);background:var(--accbg)"';
+  var badge=(fb&&R.mode==="coop"&&R.res.tally[k])?'<span class="pill" style="margin-left:auto;background:var(--soft);color:var(--ink)">×'+R.res.tally[k]+'</span>':"";
+  h+='<button class="'+cls+'"'+extra+' '+(canVote?'onclick="mutate(act_answer(MP.pid,'+k+'))"':"disabled")+'><span class="l">'+"ABC"[k]+'</span><span>'+q[3][orig]+'</span>'+badge+'</button>'});
+ if(!fb){
+  var nv=Object.keys(R.votes).length,need=R.mode==="coop"?R.players.length:1;
+  h+='<p class="mut" style="margin-top:10px">'+(canVote?(R.mode==="coop"?"Votez : la réponse la plus choisie sera retenue.":"À vous de répondre."):(mine!==undefined?"Votre réponse est enregistrée. ":(R.mode==="comp"?esc(R.players[R.cur].name)+" répond... ":"")))+(R.mode==="coop"?" "+nv+" / "+need+" réponses.":"")+'</p>';
+  if(isHost&&nv>0&&nv<need)h+='<button class="ghost" style="width:100%;margin-top:6px" onclick="mutate(act_force(MP.pid))">Valider sans attendre</button>'
+ }else{
+  var ok=R.res.ok,who=R.mode==="comp"?esc(R.players[R.cur].name):"La table";
+  var head=ok?"Bonne réponse !":(R.res.pick===-1?"Pas de réponse retenue.":"Pas tout à fait."),
+  tail=ok?" Le cube "+c.n.toLowerCase()+" rejoint "+(R.mode==="coop"?"la tour.":"la tour de "+who+"."):(R.mode==="coop"?" Une erreur de plus pour la table.":"");
+  h+='<div class="note" style="background:'+(ok?"var(--okbg)":"var(--kobg)")+';color:'+(ok?"var(--ok)":"var(--ko)")+'"><b>'+head+'</b>'+tail+'</div><div class="note"><b>À retenir :</b> '+q[4]+srcLine(q)+'</div><button class="main" style="margin-top:12px" onclick="mutate(act_next())">Continuer</button>'}
+ return h+'</div></div>'}
+
+function drawMpEnd(R){
+ var host=R.host===MP.pid,h=topbar()+errBox()+'<div class="card" style="text-align:center"><h1 style="margin-bottom:8px">';
+ if(R.mode==="coop"){
+  h+=R.result==="win"?"La pyramide est terminée !":"La nuit tombe...";
+  h+='</h1><div style="display:flex;justify-content:center">'+towerSVG(R.shared.cubes,120)+'</div><p style="margin-top:10px">'+(R.result==="win"?"Bravo, vous avez terminé la pyramide ensemble.":"Il vous manque "+(R.goal-sumCubes(R.shared))+" cube"+(R.goal-sumCubes(R.shared)>1?"s":"")+". Rejouez pour tenter de les trouver.")+'</p>'
+ }else{
+  var w=R.players[R.winner];
+  h+='Victoire de '+esc(w.name)+' !</h1><div style="display:flex;justify-content:center">'+towerSVG(w.cubes,120)+'</div><div class="grid2" style="margin-top:12px">';
+  R.players.forEach(function(p){h+='<div class="team">'+towerSVG(p.cubes,36)+'<div style="min-width:0"><b style="font-size:13px">'+esc(p.name)+'</b><div class="mut" style="font-size:12px">'+sumCubes(p)+' / '+R.goal+'</div></div></div>'});
+  h+='</div>'}
+ h+='</div>'+(host?'<button class="main" style="margin-top:12px" onclick="mutate(act_restart(MP.pid))">Rejouer avec les mêmes joueurs</button>':'<p class="mut" style="text-align:center;margin-top:12px">L\'hôte peut relancer une partie.</p>');
+ app.innerHTML=h}
+
+/* --- démarrage : lien d'invitation ?salle=ABCD --- */
+(function(){
+ try{var n=memo("cac:name");if(n)S.myName=n;
+  var m=/[?&]salle=([A-Za-z]{4})/.exec(location.search);
+  if(m){S.joinCode=m[1].toUpperCase();S.screen="mpjoin"}
+  else{var P=new URLSearchParams(location.search),ni=P.get("niveau"),mo=P.get("mode"),ta=parseInt(P.get("equipes"),10);
+   if(ni==="fam"||ni==="pro"||ni==="mix")S.level=ni;
+   if(mo==="coop"||mo==="comp")S.mode=mo;
+   if(ta>=2&&ta<=4)S.n=ta;
+   if(ni||mo)S.screen="setup"}}catch(e){}
+})();
+render();
+</script>
+</body>
+</html>
