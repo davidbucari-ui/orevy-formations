@@ -222,3 +222,6 @@ a.lien-ligne:hover { background: var(--accent-light); border-color: var(--accent
   .grille-champs { grid-template-columns: 1fr; }
   .lecteur-pos { display: none; }
 }
+
+/* Onglet Jeu : bouton et QR code côte à côte */
+.jeu-lancer { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
