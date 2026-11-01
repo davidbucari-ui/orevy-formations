@@ -74,6 +74,12 @@ const SCHEMAS = {
     { nom: 'titre', libelle: 'Titre' },
     { nom: 'legende', libelle: 'Légende' },
   ],
+  jeu: [
+    { nom: 'titre', libelle: 'Titre', aide: 'Par défaut : « Cube à cube »' },
+    { nom: 'consigne', libelle: 'Consigne', type: 'zone', lignes: 3 },
+    { nom: 'niveau', libelle: 'Niveau (fam, pro ou mix)', court: true, aide: 'fam = familles, pro = professionnels, mix = mixte. Vide : le joueur choisit.' },
+    { nom: 'mode', libelle: 'Mode (coop ou comp)', court: true, aide: 'Vide : le joueur choisit.' },
+  ],
 }
 const NARRATION = [
   { nom: 'audio_url', libelle: 'Fichier audio (MP3)', aide: 'Lien public du fichier de narration.' },
