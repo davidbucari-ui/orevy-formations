@@ -374,11 +374,15 @@ function BlocVideo({ c }) {
 }
 
 // Lien vers le jeu Cube à cube (public/jeu/cube-a-cube.html, copié dans docs/ au build).
-function BlocJeu({ c }) {
+export function lienJeu({ niveau, mode } = {}) {
   const params = new URLSearchParams()
-  if (c.niveau) params.set('niveau', c.niveau)
-  if (c.mode) params.set('mode', c.mode)
-  const href = `${import.meta.env.BASE_URL}jeu/cube-a-cube.html${params.toString() ? `?${params}` : ''}`
+  if (niveau) params.set('niveau', niveau)
+  if (mode) params.set('mode', mode)
+  return `${import.meta.env.BASE_URL}jeu/cube-a-cube.html${params.toString() ? `?${params}` : ''}`
+}
+
+function BlocJeu({ c }) {
+  const href = lienJeu(c)
   return (
     <section className="bloc-situation">
       <p className="bloc-etiquette">{c.label || 'Pour jouer ensemble'}</p>

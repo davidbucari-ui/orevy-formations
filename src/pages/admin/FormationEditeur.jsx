@@ -4,6 +4,7 @@ import { messageErreur } from '../../lib/format'
 import { Entete, Onglets, Alerte } from '../../components/ui'
 import ListeEditable, { Champ } from '../../components/ListeEditable'
 import EditeurBlocs from './EditeurBlocs'
+import OngletJeu from './OngletJeu'
 
 const CHAMPS_FORMATION = [
   { nom: 'titre', libelle: 'Titre', requis: true, large: true, placeholder: 'Ex : Accueil du jeune enfant' },
@@ -34,12 +35,14 @@ export default function FormationEditeur({ formation: initiale, onClose }) {
         {!nouvelle && (
           <Onglets actif={onglet} onChange={setOnglet} onglets={[
             ['infos', 'Informations'], ['blocs', 'Parcours e-learning'], ['chapitres', 'Séquences'], ['ressources', 'Ressources'],
-            ['slides', 'Slides'], ['quiz', 'Quiz'],
+            ['slides', 'Slides'], ['quiz', 'Quiz'], ['jeu', 'Jeu'],
           ]} />
         )}
         {onglet === 'infos' && <Infos formation={formation} onSaved={setFormation} />}
 
         {onglet === 'blocs' && <EditeurBlocs formation={formation} />}
+
+        {onglet === 'jeu' && <OngletJeu formation={formation} />}
 
         {onglet === 'chapitres' && (
           <ListeEditable key="chapitres" table="chapitres" formationId={formation.id} tri={['ordre']} libelleAjout="Nouvelle séquence"
